@@ -4,12 +4,107 @@ Chapter_3/block
 Chapter_3/hello_gpu
 *.o
 *.out
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
 
-# Nsight Compute profiling reports
+# Nsight Compute / Nsight Systems profiling reports
 *.ncu-rep
+*.nsys-rep
+*.qdrep
+*.sqlite
 
 # Jupyter
 .ipynb_checkpoints/
 
 # Empty scratch folders
 Untitled Folder/
+
+# ---------------------------------------------------------------------------
+# Secrets, credentials, and keys — never commit these
+# ---------------------------------------------------------------------------
+
+# Environment / dotenv files
+.env
+.env.*
+!.env.example
+!.env.sample
+*.env
+
+# Generic secret/credential-named files
+*secret*
+*secrets*
+*credential*
+*credentials*
+*password*
+*passwd*
+*apikey*
+*api_key*
+*.token
+*_token
+token.json
+service-account*.json
+gcloud-service-key.json
+
+# Private keys, certs, keystores
+*.pem
+*.key
+*.key.pub
+*.p12
+*.pfx
+*.pkcs12
+*.jks
+*.keystore
+*.crt
+*.cer
+*.der
+*.csr
+id_rsa*
+id_dsa*
+id_ecdsa*
+id_ed25519*
+*.ppk
+*.gpg
+*.pgp
+*.asc
+
+# Cloud provider credentials/configs
+.aws/
+**/.aws/credentials
+**/.aws/config
+.gcp/
+gcp-credentials.json
+.azure/
+.kube/
+kubeconfig
+*.kubeconfig
+
+# SSH
+.ssh/
+known_hosts
+
+# GitHub / CI tokens
+.netrc
+.npmrc
+.pypirc
+.git-credentials
+
+# Terraform state (can contain secrets in plaintext)
+*.tfstate
+*.tfstate.*
+.terraform/
+
+# Database dumps / connection strings
+*.sql
+*.sqlite3
+*.dump
+
+# Misc local config that may carry secrets
+config.local.*
+local_settings.py
+secrets.yml
+secrets.yaml

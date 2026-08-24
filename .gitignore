@@ -1,7 +1,7 @@
 # Compiled binaries / build artifacts
-grayscale
-Chapter_3/block
-Chapter_3/hello_gpu
+Chapter_2/block
+Chapter_2/hello_gpu
+Chapter_3/grayscale
 *.o
 *.out
 *.obj

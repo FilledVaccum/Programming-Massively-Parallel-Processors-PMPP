@@ -26,6 +26,21 @@ __global__ void learning_block_wrap() {
 		globalId, blockIdx.x, warpId, laneId);
 }
 
+
+//Now we will make warp do some work
+__global__ void learning_block_wrap_work() {
+	int globalId = blockIdx.x * blockDim.x + threadIdx.x;
+	int warpId = threadIdx.x / 32 ;
+
+	// Do different amount of useless work per warp
+	float x = 1.0f;
+	for (int i = 0 ; i < warpId * 1000000; i++) {
+		x = x * 1.001f;
+	}
+
+	printf("Done: Global %3d, Warp %d\n", globalId, warpId);
+}
+
 int main() {
         printf("We are in - Learning Block Basic Function - : \n");
 	learning_block_basic<<<4,8>>>();
@@ -41,6 +56,10 @@ int main() {
 	printf("We are in - Learning Block Grid Function - : \n");
 	learning_block_grid<<<4,8>>>();
 	cudaDeviceSynchronize();  // ← WAIT for second kernel to finish
+
+	printf("We are now triggering - Wrap Work\n");
+	learning_block_wrap_work<<<3, 64>>>();
+	cudaDeviceSynchronize();  
 
 	cudaError_t err = cudaGetLastError();
 	if (err != cudaSuccess) {

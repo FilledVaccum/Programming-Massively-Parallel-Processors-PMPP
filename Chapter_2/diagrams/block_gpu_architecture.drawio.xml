@@ -1,0 +1,189 @@
+<mxfile host="app.diagrams.net" agent="draw.io" version="24.7.17" type="device">
+  <diagram id="block-gpu-arch" name="GPU Architecture - block.cu">
+    <mxGraphModel dx="1400" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1650" pageHeight="1180" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- Title -->
+        <mxCell id="aTitle" value="GPU Architecture &#8212; Executing block.cu" style="text;html=1;align=left;verticalAlign=middle;fontSize=22;fontStyle=1;fontColor=#0b0b0b;" vertex="1" parent="1">
+          <mxGeometry x="40" y="16" width="800" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aSub" value="Kernel launch config: &lt;&lt;&lt;4, 8&gt;&gt;&gt;  &#8594;  gridDim.x = 4 blocks &#183; blockDim.x = 8 threads/block &#183; warpSize = 32 (fixed by hardware)" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontStyle=0;fontColor=#52514e;" vertex="1" parent="1">
+          <mxGeometry x="40" y="48" width="1000" height="22" as="geometry" />
+        </mxCell>
+
+        <!-- Legend -->
+        <mxCell id="aLegend" value="LEGEND" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#c3c2b7;verticalAlign=top;align=left;spacingLeft=12;spacingTop=8;fontSize=13;fontStyle=1;fontColor=#0b0b0b;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="1260" y="16" width="350" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="aSw1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#4a3aa7;strokeColor=#382b80;" vertex="1" parent="aLegend">
+          <mxGeometry x="14" y="34" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="aLb1" value="Scheduling / synchronization" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#0b0b0b;" vertex="1" parent="aLegend">
+          <mxGeometry x="44" y="32" width="292" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="aSw2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;" vertex="1" parent="aLegend">
+          <mxGeometry x="14" y="64" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="aLb2" value="SM / compute execution unit" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#0b0b0b;" vertex="1" parent="aLegend">
+          <mxGeometry x="44" y="62" width="292" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="aSw3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#0f7a52;" vertex="1" parent="aLegend">
+          <mxGeometry x="14" y="94" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="aLb3" value="Active lane (real thread occupies it)" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#0b0b0b;" vertex="1" parent="aLegend">
+          <mxGeometry x="44" y="92" width="292" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="aSw4" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;" vertex="1" parent="aLegend">
+          <mxGeometry x="14" y="124" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="aLb4" value="Idle lane (no thread assigned)" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#0b0b0b;" vertex="1" parent="aLegend">
+          <mxGeometry x="44" y="122" width="292" height="24" as="geometry" />
+        </mxCell>
+        <mxCell id="aSw5" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#184f95;strokeColor=#0d366b;" vertex="1" parent="aLegend">
+          <mxGeometry x="14" y="154" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="aLb5" value="Memory hierarchy (light = fast/near &#8594; dark = slow/far)" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#0b0b0b;" vertex="1" parent="aLegend">
+          <mxGeometry x="44" y="150" width="292" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="aSw6" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#f9f9f7;strokeColor=#52514e;" vertex="1" parent="aLegend">
+          <mxGeometry x="14" y="192" width="20" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="aLb6" value="Host (CPU) domain" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontColor=#0b0b0b;" vertex="1" parent="aLegend">
+          <mxGeometry x="44" y="190" width="292" height="24" as="geometry" />
+        </mxCell>
+
+        <!-- Host box -->
+        <mxCell id="aHost" value="Host (CPU)&lt;br&gt;&lt;br&gt;main()&lt;br&gt;learning_block_basic&amp;lt;&amp;lt;&amp;lt;4,8&amp;gt;&amp;gt;&amp;gt;();" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f9f9f7;strokeColor=#52514e;fontSize=12;arcSize=6;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="110" width="220" height="140" as="geometry" />
+        </mxCell>
+
+        <!-- GPU Device container -->
+        <mxCell id="aGpu" value="GPU DEVICE" style="rounded=1;whiteSpace=wrap;html=1;container=1;collapsible=0;verticalAlign=top;align=left;spacingLeft=14;spacingTop=8;fontSize=15;fontStyle=1;fontColor=#184f95;fillColor=#eaf1fb;strokeColor=#2a78d6;strokeWidth=2;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="340" y="90" width="1270" height="1020" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aGiga" value="GigaThread Engine&lt;br&gt;(Block Scheduler)&lt;br&gt;&lt;br&gt;Distributes 4 blocks&lt;br&gt;across available SMs" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4a3aa7;strokeColor=#382b80;fontColor=#ffffff;fontSize=12;arcSize=6;strokeWidth=2;" vertex="1" parent="aGpu">
+          <mxGeometry x="20" y="40" width="260" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- SM 0 (detailed) -->
+        <mxCell id="aSm0" value="SM 0 &#8212; Block 0 (blockIdx.x = 0)" style="rounded=1;whiteSpace=wrap;html=1;container=1;collapsible=0;verticalAlign=top;align=left;spacingLeft=14;spacingTop=8;fontSize=13;fontStyle=1;fontColor=#8a3413;fillColor=#fceee7;strokeColor=#eb6834;strokeWidth=2;arcSize=4;" vertex="1" parent="aGpu">
+          <mxGeometry x="20" y="160" width="380" height="620" as="geometry" />
+        </mxCell>
+        <mxCell id="aSm0Warp" value="Warp Scheduler &amp; Dispatch&lt;br&gt;&lt;br&gt;blockDim.x = 8 &#8594; 1 warp allocated&lt;br&gt;(hardware warpSize = 32)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#0f7a52;fontColor=#ffffff;fontSize=12;arcSize=6;strokeWidth=2;" vertex="1" parent="aSm0">
+          <mxGeometry x="15" y="40" width="350" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="aSm0Reg" value="Register File (per-thread)&lt;br&gt;blockIdx, threadIdx, blockDim, gridDim&lt;br&gt;globalId = blockIdx.x * blockDim.x + threadIdx.x" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#b7d3f6;strokeColor=#2a78d6;fontColor=#0b0b0b;fontSize=12;arcSize=6;strokeWidth=2;" vertex="1" parent="aSm0">
+          <mxGeometry x="15" y="120" width="350" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="aSm0CoreLbl" value="Warp 0 &#8212; 32 CUDA Core Lanes" style="text;html=1;align=left;verticalAlign=middle;fontSize=12;fontStyle=1;fontColor=#0b0b0b;" vertex="1" parent="aSm0">
+          <mxGeometry x="15" y="200" width="350" height="20" as="geometry" />
+        </mxCell>
+
+        <!-- 32 lane cells: row 0 = active (threads 0-7), rows 1-3 = idle (lanes 8-31) -->
+        <mxCell id="aLane_0_0" value="T0" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#0f7a52;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="aSm0"><mxGeometry x="15" y="225" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_0_1" value="T1" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#0f7a52;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="aSm0"><mxGeometry x="59" y="225" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_0_2" value="T2" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#0f7a52;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="aSm0"><mxGeometry x="103" y="225" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_0_3" value="T3" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#0f7a52;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="aSm0"><mxGeometry x="147" y="225" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_0_4" value="T4" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#0f7a52;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="aSm0"><mxGeometry x="191" y="225" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_0_5" value="T5" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#0f7a52;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="aSm0"><mxGeometry x="235" y="225" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_0_6" value="T6" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#0f7a52;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="aSm0"><mxGeometry x="279" y="225" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_0_7" value="T7" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#1baf7a;strokeColor=#0f7a52;fontColor=#ffffff;fontSize=10;fontStyle=1;" vertex="1" parent="aSm0"><mxGeometry x="323" y="225" width="38" height="38" as="geometry" /></mxCell>
+
+        <mxCell id="aLane_1_0" value="8"  style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="15" y="269" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_1_1" value="9"  style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="59" y="269" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_1_2" value="10" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="103" y="269" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_1_3" value="11" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="147" y="269" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_1_4" value="12" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="191" y="269" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_1_5" value="13" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="235" y="269" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_1_6" value="14" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="279" y="269" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_1_7" value="15" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="323" y="269" width="38" height="38" as="geometry" /></mxCell>
+
+        <mxCell id="aLane_2_0" value="16" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="15" y="313" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_2_1" value="17" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="59" y="313" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_2_2" value="18" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="103" y="313" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_2_3" value="19" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="147" y="313" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_2_4" value="20" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="191" y="313" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_2_5" value="21" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="235" y="313" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_2_6" value="22" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="279" y="313" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_2_7" value="23" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="323" y="313" width="38" height="38" as="geometry" /></mxCell>
+
+        <mxCell id="aLane_3_0" value="24" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="15" y="357" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_3_1" value="25" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="59" y="357" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_3_2" value="26" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="103" y="357" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_3_3" value="27" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="147" y="357" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_3_4" value="28" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="191" y="357" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_3_5" value="29" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="235" y="357" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_3_6" value="30" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="279" y="357" width="38" height="38" as="geometry" /></mxCell>
+        <mxCell id="aLane_3_7" value="31" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e1e0d9;strokeColor=#898781;fontColor=#898781;fontSize=9;" vertex="1" parent="aSm0"><mxGeometry x="323" y="357" width="38" height="38" as="geometry" /></mxCell>
+
+        <mxCell id="aSm0Note" value="Only 8 / 32 lanes active &#8594; 25% warp efficiency&lt;br&gt;(blockDim.x = 8 leaves 24 lanes idle per warp)" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#fdf6ec;strokeColor=#eda100;fontColor=#7a5b00;fontSize=11;arcSize=6;" vertex="1" parent="aSm0">
+          <mxGeometry x="15" y="405" width="350" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="aSm0Shmem" value="Shared Memory / L1 Data Cache&lt;br&gt;(not used by this kernel &#8212; no __shared__ vars)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#6da7ec;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;strokeWidth=2;" vertex="1" parent="aSm0">
+          <mxGeometry x="15" y="465" width="350" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="aSm0Resident" value="Resident block: 0   |   Threads resident: 8 (of a max of ~1536-2048 per SM, GPU-dependent)" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#ffffff;strokeColor=#eb6834;fontColor=#8a3413;fontSize=11;arcSize=6;" vertex="1" parent="aSm0">
+          <mxGeometry x="15" y="545" width="350" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- SM 1-3 (abbreviated, same layout) -->
+        <mxCell id="aSm1" value="SM 1 &#8212; Block 1" style="rounded=1;whiteSpace=wrap;html=1;container=1;collapsible=0;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;fontStyle=1;fontColor=#8a3413;fillColor=#fceee7;strokeColor=#eb6834;strokeWidth=2;arcSize=4;" vertex="1" parent="aGpu">
+          <mxGeometry x="420" y="160" width="250" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="aSm1Text" value="Same layout as SM 0:&lt;br&gt;&#8226; Warp Scheduler&lt;br&gt;&#8226; Register File&lt;br&gt;&#8226; 1 warp &#8212; 8/32 lanes active&lt;br&gt;&#8226; L1 / Shared Memory (unused)" style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="aSm1">
+          <mxGeometry x="10" y="34" width="230" height="136" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aSm2" value="SM 2 &#8212; Block 2" style="rounded=1;whiteSpace=wrap;html=1;container=1;collapsible=0;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;fontStyle=1;fontColor=#8a3413;fillColor=#fceee7;strokeColor=#eb6834;strokeWidth=2;arcSize=4;" vertex="1" parent="aGpu">
+          <mxGeometry x="680" y="160" width="250" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="aSm2Text" value="Same layout as SM 0:&lt;br&gt;&#8226; Warp Scheduler&lt;br&gt;&#8226; Register File&lt;br&gt;&#8226; 1 warp &#8212; 8/32 lanes active&lt;br&gt;&#8226; L1 / Shared Memory (unused)" style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="aSm2">
+          <mxGeometry x="10" y="34" width="230" height="136" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aSm3" value="SM 3 &#8212; Block 3" style="rounded=1;whiteSpace=wrap;html=1;container=1;collapsible=0;verticalAlign=top;align=left;spacingLeft=10;spacingTop=8;fontSize=13;fontStyle=1;fontColor=#8a3413;fillColor=#fceee7;strokeColor=#eb6834;strokeWidth=2;arcSize=4;" vertex="1" parent="aGpu">
+          <mxGeometry x="940" y="160" width="250" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="aSm3Text" value="Same layout as SM 0:&lt;br&gt;&#8226; Warp Scheduler&lt;br&gt;&#8226; Register File&lt;br&gt;&#8226; 1 warp &#8212; 8/32 lanes active&lt;br&gt;&#8226; L1 / Shared Memory (unused)" style="text;html=1;align=left;verticalAlign=top;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="aSm3">
+          <mxGeometry x="10" y="34" width="230" height="136" as="geometry" />
+        </mxCell>
+
+        <mxCell id="aSmNote" value="Real GPUs contain many more SMs (20&#8211;132+ depending on generation).&lt;br&gt;Only 4 are active here because gridDim.x = 4 in &amp;lt;&amp;lt;&amp;lt;4,8&amp;gt;&amp;gt;&amp;gt;." style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=none;strokeColor=#898781;fontColor=#52514e;fontSize=11;arcSize=6;" vertex="1" parent="aGpu">
+          <mxGeometry x="420" y="360" width="770" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- Shared L2 + Global memory -->
+        <mxCell id="aL2" value="L2 Cache (shared across all SMs)&lt;br&gt;Not exercised by this kernel &#8212; only the printf() ring buffer touches memory" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;strokeWidth=2;" vertex="1" parent="aGpu">
+          <mxGeometry x="20" y="800" width="1230" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="aGmem" value="Global Memory (GDDR6 / HBM)&lt;br&gt;Host-side printf() buffer lives here &#8212; flushed to console by cudaDeviceSynchronize()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#184f95;strokeColor=#0d366b;fontColor=#ffffff;fontSize=12;arcSize=6;strokeWidth=2;" vertex="1" parent="aGpu">
+          <mxGeometry x="20" y="890" width="1230" height="80" as="geometry" />
+        </mxCell>
+
+        <!-- Edges -->
+        <mxCell id="eHostGiga" value="Kernel Launch &lt;4,8&gt;" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;strokeColor=#52514e;fontColor=#52514e;fontSize=10;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="aHost" target="aGiga">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eGigaSm0" value="Block 0" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="aGiga" target="aSm0">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eGigaSm1" value="Block 1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="aGiga" target="aSm1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eGigaSm2" value="Block 2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="aGiga" target="aSm2">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eGigaSm3" value="Block 3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;fontSize=10;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="aGiga" target="aSm3">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="eGmemHost" value="cudaDeviceSynchronize()&#10;reads back printf buffer" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;strokeColor=#52514e;fontColor=#52514e;fontSize=10;exitX=0;exitY=0.5;entryX=0.5;entryY=1;" edge="1" parent="1" source="aGmem" target="aHost">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,15 @@
+# Compiled binaries / build artifacts
+grayscale
+Chapter_3/block
+Chapter_3/hello_gpu
+*.o
+*.out
+
+# Nsight Compute profiling reports
+*.ncu-rep
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Empty scratch folders
+Untitled Folder/

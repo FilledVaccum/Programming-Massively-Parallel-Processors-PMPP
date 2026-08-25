@@ -72,6 +72,14 @@ Ask:
    probably the wrong tool — kernel-launch overhead alone will dominate) or
    in the millions (GPU is exactly the right tool)? Order-of-magnitude
    matters before you write anything.
+5. **Does a library already do this?** `cuBLAS` (dense linear algebra),
+   `cuDNN` (neural-net layers), `cuFFT` (transforms), `Thrust` (sort, scan,
+   reduce, transform — the STL-like primitives) cover an enormous fraction
+   of "I need to parallelize X" before X is novel enough to need a
+   hand-written kernel. Writing your own is appropriate when your operation
+   isn't one of these, or when you're here specifically to learn the
+   mechanics (as in this repo) — not as the default first move in
+   production code.
 
 ---
 
@@ -308,6 +316,130 @@ help but doesn't measure as helping is not helping).
    scheduling. Smallest gains, most fragile, most likely to be undone by the
    next compiler version — do this only after everything above is done and
    you're chasing the last few percent.
+
+---
+
+## Decision trees inside the kernel
+
+Phases 2, 3, and 8 above each state a *rule*, but the actual moment-to-moment
+thinking is a **branch**, not a straight line: "which memory type for *this*
+array," "what shape grid for *this* data," and especially "the profiler just
+told me something — what do I actually do about it." These three trees are
+the branching logic the phases above compress into prose. Come back to these
+specifically once you have a naive, correct kernel and (for the third tree)
+a profiler run in hand.
+
+### Tree A — Where should this array/value live? (resolves Phase 3)
+
+Walk this once *per array* your kernel touches — different arrays in the
+same kernel routinely land in different places.
+
+```
+Is it the same value(s) for every thread, read-only, and small (fits
+comfortably in 64KB)?
+ ├─ YES → __constant__ memory (broadcast-optimized, cached, e.g. a fixed
+ │         convolution filter or a small lookup table)
+ └─ NO
+     Is it re-read by MULTIPLE threads within the same block — genuine
+     spatial/data reuse (overlapping stencil windows, a shared tile of a
+     matrix, neighbors in a graph within the block's assigned region)?
+      ├─ YES → __shared__ memory: load the region once per block, have
+      │         every thread in the block read the block-local copy
+      │         instead of returning to global memory for it
+      └─ NO
+          Is it a small, per-thread-private scalar or fixed-size array,
+          with no reuse across threads at all?
+           ├─ YES → an ordinary local variable. The compiler keeps it in a
+           │         register automatically — there's no memory type to
+           │         name or manage yourself.
+           └─ NO (large, unique per thread, touched once or twice, no
+                reuse) → global memory. This is the default for a reason:
+                don't reach for shared memory "just in case" — only when
+                Tree A's reuse question above actually answers yes.
+```
+
+### Tree B — What grid/block dimensionality? (resolves Phase 2)
+
+```
+What's the natural shape of the data being indexed?
+
+1D (flat array, time series, 1D signal)?
+ → 1D grid of 1D blocks: i = blockIdx.x*blockDim.x + threadIdx.x
+
+2D (image, matrix, 2D cellular simulation)?
+ → 2D grid of 2D blocks: row/col from blockIdx.y/x, blockDim.y/x,
+   threadIdx.y/x. Keep it 2D-native rather than flattening the index by
+   hand — boundary checks and memory-access reasoning stay far more
+   legible (Phase 2, point 1).
+
+3D (volume, video stack, 3D simulation)?
+ → 3D grid of 3D blocks — same pattern, add a .z component.
+
+Doesn't map onto array coordinates at all (graph, sparse matrix,
+variable-length or irregular work items)?
+ → Flatten to a 1D grid over a WORK-ITEM LIST instead — one thread per
+   edge, one thread per non-zero entry, one thread per node — independent
+   of whatever storage shape the underlying structure has. The grid's
+   dimensionality should describe the shape of the *parallel work*, not
+   the shape of the data structure holding it.
+```
+
+### Tree C — The profiler said something. What do I actually do? (resolves Phase 8)
+
+This is the tree Phase 8's flat priority list is really shorthand for. An
+expert doesn't apply the nine levers in fixed order regardless of symptoms —
+they read Phase 7's numbers and jump straight to the branch that matches.
+Read top to bottom; each branch either gives you the fix or tells you which
+question to ask next.
+
+```
+Achieved occupancy far below the theoretical max for this GPU?
+ ├─ YES → look at *why* before touching block size blindly:
+ │    ├─ Registers-per-thread or shared-mem-per-block usage is high,
+ │    │   limiting how many blocks fit on an SM at once?
+ │    │    → shrink the per-thread footprint (fewer live variables,
+ │    │      smaller shared-mem tile) OR reduce block size so more
+ │    │      blocks fit concurrently
+ │    └─ Block size isn't a multiple of 32, or is very small (< 64)?
+ │         → increase block size (revisit Phase 2's guess with real data)
+ └─ NO (occupancy's already near max, but the kernel is still slow) →
+      occupancy isn't your bottleneck; keep reading below.
+
+Compare memory throughput (% of peak) against compute throughput (% of peak):
+ ├─ BOTH low → not enough work in flight to hide latency, or access is
+ │    uncoalesced → fix coalescing FIRST (Phase 8, lever 1 — cheapest,
+ │    no algorithm change), re-profile, THEN re-check occupancy above.
+ ├─ Memory throughput near peak, compute throughput low → MEMORY-BOUND.
+ │    The kernel is already moving bytes as fast as the hardware allows.
+ │    The only lever left is moving FEWER bytes: shared-memory tiling to
+ │    reuse data (lever 2), a smaller data type, or restructuring to skip
+ │    a transfer entirely. Arithmetic/instruction-level tricks (lever 9)
+ │    cannot help here — the ALUs were never the bottleneck.
+ └─ Compute throughput near peak, memory throughput low → COMPUTE-BOUND.
+      Look at instruction mix and divergence — this is where unrolling,
+      cheaper instructions, and warp-uniform branching (levers 3, 9)
+      actually pay off. Shared-memory tiling (lever 2) won't help a
+      kernel that was never waiting on memory.
+
+Nsight Compute's warp-stall-reason breakdown:
+ ├─ "Memory dependency" dominates → a latency-hiding problem → raise
+ │    occupancy (more resident warps to switch to) or fix coalescing —
+ │    same two fixes as the "both low" branch above.
+ ├─ "Execution/synchronization dependency" dominates → too many, or too
+ │    serial, __syncthreads() barriers, or long dependent-instruction
+ │    chains → reduce sync points, or restructure to shorten the
+ │    dependency chain (lever 3/5 territory).
+ └─ Heavy "not selected"/control-flow stalls → warp divergence → restructure
+      branches to be warp-uniform, or split the divergent case into a
+      *separate* kernel launch so no single warp ever executes both paths
+      (lever 3).
+```
+
+The pattern across all three trees: **the questions are the same regardless
+of how simple or complex the kernel is; only which branch you land on
+changes.** That's the same claim the scaling ladder below makes at the
+whole-kernel level — these trees make it true at the level of a single
+design decision, too.
 
 ---
 

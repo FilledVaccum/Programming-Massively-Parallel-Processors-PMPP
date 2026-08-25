@@ -248,10 +248,46 @@ elsewhere — an expert checks these *before* committing:
   small on-device NPU may be the only hardware actually available, and the
   question becomes "how do I fit this workload into that budget," not
   "what's theoretically fastest."
+- **Build vs. buy.** Owning GPU/cluster hardware isn't the only way to get
+  its benefit — a managed API (hosted inference endpoint, managed Spark
+  cluster, serverless GPU function) can be the pragmatic answer when the
+  workload is intermittent, the team doesn't want to own hardware
+  lifecycle/ops, or the volume doesn't yet justify dedicated capacity. This
+  is an operational decision layered on top of the tree, not a replacement
+  for it — you still need the tree's answer to know *what kind* of managed
+  service to rent.
 
 ---
 
-## 4. The meta-principle: measure before you migrate
+## 4. Known simplifications in this tree
+
+No decision tree this size captures every real case. Naming what it
+flattens matters more than pretending it's complete:
+
+- **CPU vs. GPU vs. cluster is presented as either/or — most production
+  systems are hybrid.** A typical real pipeline uses the CPU for I/O,
+  orchestration, and irregular pre/post-processing, and hands only the
+  regular numeric core to the GPU. The tree's leaves describe where the
+  *bottleneck* work should run, not a rule that the entire program must
+  live on one processor.
+- **"GPU cluster" hides a real distinction: single-node multi-GPU vs.
+  multi-node.** GPUs on the same node talk over NVLink/PCIe
+  (microseconds, very high bandwidth); GPUs on different nodes talk over
+  the network (milliseconds, far lower bandwidth). Whether a workload can
+  cross that boundary cheaply depends heavily on how much inter-GPU
+  communication the algorithm needs (data-parallel training tolerates it
+  far better than tightly-coupled simulations do) — a distinction the
+  Q6 leaf glosses over.
+- **This is framed as a one-time decision — it isn't.** The right answer
+  can change as a product's scale grows (a script that started on one CPU
+  core can outgrow it within months), so the honest process is: answer the
+  tree for *today's* scale, build the simplest thing that satisfies it, and
+  **re-run Q3 onward** when volume changes by an order of magnitude rather
+  than assuming the original answer still holds.
+
+---
+
+## 5. The meta-principle: measure before you migrate
 
 This ties directly back to Phase 0 of `KERNEL_DESIGN_FIRST_PRINCIPLES.md`:
 **write the simplest single-threaded CPU version first, and profile it,**
@@ -271,7 +307,7 @@ saving you a costly, unnecessary migration.
 
 ---
 
-## 5. Worked example: was `vecAddKernel.cu` even a good candidate for GPU?
+## 6. Worked example: was `vecAddKernel.cu` even a good candidate for GPU?
 
 Applying the tree honestly to this repo's own example, at its actual size
 (`n = 10,000` floats):

@@ -1,6 +1,7 @@
 # Compiled binaries / build artifacts
 Chapter_2/block
 Chapter_2/hello_gpu
+Chapter_2/vecAddKernel
 Chapter_3/grayscale
 *.o
 *.out

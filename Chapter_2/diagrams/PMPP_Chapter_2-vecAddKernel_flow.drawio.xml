@@ -1,0 +1,273 @@
+<mxfile host="app.diagrams.net" agent="draw.io" version="24.7.17" type="device">
+  <diagram id="vecadd-flow" name="vecAddKernel.cu - Complete Flow">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1900" pageHeight="3460" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <!-- ===================== TITLE ===================== -->
+        <mxCell id="title" value="Complete Code &amp; Data-Flow Analysis &#8212; Chapter_2/vecAddKernel.cu" style="text;html=1;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;fontColor=#0b0b0b;" vertex="1" parent="1">
+          <mxGeometry x="40" y="14" width="1200" height="34" as="geometry" />
+        </mxCell>
+        <mxCell id="subtitle" value="CUDA vector addition C = A + B &#8212; every host/device step, every variable's journey across the PCIe boundary, and the reasoning behind each line" style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=#52514e;" vertex="1" parent="1">
+          <mxGeometry x="40" y="50" width="1800" height="22" as="geometry" />
+        </mxCell>
+        <mxCell id="fileOverview" value="&lt;b&gt;Three parts of this one file:&lt;/b&gt;  (1) &lt;b&gt;__global__ vecAddKernel&lt;/b&gt; &#8212; the parallel program that EVERY GPU thread executes (Device).  (2) &lt;b&gt;vecAdd()&lt;/b&gt; &#8212; a normal C function that runs on the CPU and orchestrates the whole GPU workflow: allocate device memory &#8594; copy inputs in &#8594; launch the kernel &#8594; copy the result back &#8594; free device memory (Host).  (3) &lt;b&gt;main()&lt;/b&gt; &#8212; allocates/initializes the data, calls vecAdd() once, then verifies every result (Host)." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#d4a017;fontColor=#52514e;fontSize=12;arcSize=4;align=left;spacingLeft=8;spacingRight=8;" vertex="1" parent="1">
+          <mxGeometry x="40" y="78" width="1820" height="52" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== LEGEND ===================== -->
+        <mxCell id="lg1" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;" vertex="1" parent="1"><mxGeometry x="40" y="140" width="14" height="14" as="geometry" /></mxCell>
+        <mxCell id="lgl1" value="Host (CPU) &#8212; sequential, one instruction at a time" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="1"><mxGeometry x="60" y="138" width="330" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg2" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;" vertex="1" parent="1"><mxGeometry x="400" y="140" width="14" height="14" as="geometry" /></mxCell>
+        <mxCell id="lgl2" value="Device (GPU) &#8212; run by thousands of threads at once" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="1"><mxGeometry x="420" y="138" width="340" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg3" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#4a3aa7;strokeColor=#382b80;" vertex="1" parent="1"><mxGeometry x="780" y="140" width="14" height="14" as="geometry" /></mxCell>
+        <mxCell id="lgl3" value="Blocking / implicitly-synchronizing call" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="1"><mxGeometry x="800" y="138" width="280" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg4" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e34948;strokeColor=#a12a2a;" vertex="1" parent="1"><mxGeometry x="1100" y="140" width="14" height="14" as="geometry" /></mxCell>
+        <mxCell id="lgl4" value="Boundary-guard / out-of-bounds path" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="1"><mxGeometry x="1120" y="138" width="280" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg5" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e6f4ea;strokeColor=#2f9e44;" vertex="1" parent="1"><mxGeometry x="40" y="164" width="14" height="14" as="geometry" /></mxCell>
+        <mxCell id="lgl5" value="Device global memory (VRAM)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="1"><mxGeometry x="60" y="162" width="330" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg6" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#d4a017;dashed=1;" vertex="1" parent="1"><mxGeometry x="400" y="164" width="14" height="14" as="geometry" /></mxCell>
+        <mxCell id="lgl6" value="&quot;Why&quot; note &#8212; the reasoning behind the code" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="1"><mxGeometry x="420" y="162" width="340" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg7" value="" style="line;strokeColor=#8a3413;strokeWidth=2;html=1;dashed=1;" vertex="1" parent="1"><mxGeometry x="780" y="171" width="24" height="1" as="geometry" /></mxCell>
+        <mxCell id="lgl7" value="Async kernel launch (host does not wait)" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="1"><mxGeometry x="810" y="162" width="320" height="18" as="geometry" /></mxCell>
+        <mxCell id="lg8" value="" style="line;strokeColor=#0b0b0b;strokeWidth=2;html=1;" vertex="1" parent="1"><mxGeometry x="1160" y="171" width="24" height="1" as="geometry" /></mxCell>
+        <mxCell id="lgl8" value="Synchronous call / normal control flow" style="text;html=1;align=left;verticalAlign=middle;fontSize=11;fontColor=#0b0b0b;" vertex="1" parent="1"><mxGeometry x="1190" y="162" width="320" height="18" as="geometry" /></mxCell>
+
+        <!-- ===================== LANES ===================== -->
+        <mxCell id="laneMain" value="HOST (CPU) &#8212; main()" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=14;fontSize=14;fontStyle=1;fontColor=#184f95;fillColor=#eaf1fb;strokeColor=#2a78d6;strokeWidth=2;arcSize=2;" vertex="1" parent="1">
+          <mxGeometry x="40" y="190" width="560" height="1910" as="geometry" />
+        </mxCell>
+        <mxCell id="laneVecAdd" value="HOST (CPU) &#8212; vecAdd()  [orchestrator function]" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=14;fontSize=14;fontStyle=1;fontColor=#184f95;fillColor=#dbe9fb;strokeColor=#2a78d6;strokeWidth=2;arcSize=2;" vertex="1" parent="1">
+          <mxGeometry x="660" y="190" width="560" height="1910" as="geometry" />
+        </mxCell>
+        <mxCell id="laneDevice" value="DEVICE (GPU) &#8212; vecAddKernel &lt;&lt;&lt;40,256&gt;&gt;&gt; execution" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=14;fontSize=14;fontStyle=1;fontColor=#8a3413;fillColor=#fceee7;strokeColor=#eb6834;strokeWidth=2;arcSize=2;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="190" width="580" height="1910" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== LANE 1: main() ===================== -->
+        <mxCell id="m1" value="Start: main()" style="shape=terminator;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="70" y="220" width="500" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="m2" value="int n = 10000;&lt;br&gt;int size = n * sizeof(float);  &#8212;&gt;  40,000 bytes&lt;br&gt;&lt;br&gt;&lt;i&gt;Why: the GPU driver and malloc() only understand raw byte counts, not &amp;quot;elements&amp;quot; &#8212; so every allocation converts element-count &#215; sizeof(type) into bytes up front.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="310" width="500" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="m3" value="Allocate HOST memory:&lt;br&gt;A_h = (float*)malloc(size);&lt;br&gt;B_h = (float*)malloc(size);&lt;br&gt;C_h = (float*)malloc(size);&lt;br&gt;&lt;br&gt;&lt;i&gt;Why: these live in ordinary CPU RAM (the process heap). malloc() only knows about bytes, so the &lt;b&gt;(float*)&lt;/b&gt; cast tells the compiler how to interpret and index that raw block as an array of floats.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="440" width="500" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="m4" value="for (i = 0; i &lt; n; i++) {&lt;br&gt;&amp;nbsp;&amp;nbsp;A_h[i] = 1.0f;&lt;br&gt;&amp;nbsp;&amp;nbsp;B_h[i] = 2.0f;&lt;br&gt;}&lt;br&gt;&lt;i&gt;Why: C_h is deliberately left uninitialized (garbage) here &#8212; it exists only to receive the GPU's answer later. If verification ran before vecAdd(), C_h would contain junk.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="600" width="500" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="m5" value="vecAdd(A_h, B_h, C_h, n);&lt;br&gt;&lt;i&gt;A normal, synchronous C function call &#8212; main() halts here and waits for vecAdd() to fully return before continuing (unlike a kernel launch).&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="70" y="770" width="500" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="m6" value="int correct = 1;&lt;br&gt;for (i = 0; i &lt; n; i++) {&lt;br&gt;&amp;nbsp;&amp;nbsp;if (C_h[i] != 3.0f) {&lt;br&gt;&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;printf(&quot;Error at index %d...&quot;); correct=0; break;&lt;br&gt;&amp;nbsp;&amp;nbsp;}&lt;br&gt;}&lt;br&gt;&lt;i&gt;Why 3.0f exactly (no epsilon/tolerance needed): 1.0f + 2.0f is exactly representable in IEEE-754 float &#8212; no rounding error, so a strict != comparison is safe here.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="900" width="500" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="m7" value="correct == 1 ?" style="rhombus;whiteSpace=wrap;html=1;fillColor=#cde2fb;strokeColor=#2a78d6;fontColor=#0b0b0b;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="220" y="1100" width="200" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="m7a" value="printf(&quot;SUCCESS - All %d elements are correct.&quot;, n);" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="1230" width="500" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="m8" value="free(A_h);&lt;br&gt;free(B_h);&lt;br&gt;free(C_h);&lt;br&gt;&lt;br&gt;&lt;i&gt;Why: releases the CPU heap memory back to the OS. Note there is nothing to free on the device here &#8212; vecAdd() already cudaFree'd A_d/B_d/C_d before it returned.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="70" y="1330" width="500" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="m9" value="return 0; &#8212; End" style="shape=terminator;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=13;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="220" y="1500" width="200" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== LANE 2: vecAdd() ===================== -->
+        <mxCell id="v1" value="vecAdd(A_h, B_h, C_h, n) &#8212; HOST function entry&lt;br&gt;&lt;br&gt;Runs entirely on the CPU. Its only job is to &lt;b&gt;drive&lt;/b&gt; the GPU: allocate device memory &#8594; copy inputs in &#8594; launch the kernel &#8594; copy the result back &#8594; free device memory." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="690" y="220" width="500" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="v2" value="&lt;b&gt;Part 1 &#8212; Setup&lt;/b&gt;&lt;br&gt;float *A_d, *B_d, *C_d;&lt;br&gt;&lt;br&gt;&lt;i&gt;Why: these are just pointer VARIABLES sitting in CPU stack memory. Right now they are uninitialized &#8212; they will hold GPU (device) addresses only after cudaMalloc runs. The &lt;b&gt;_d&lt;/b&gt; suffix (device) vs &lt;b&gt;_h&lt;/b&gt; (host) is a naming convention, not a language rule &#8212; it's how the programmer tracks which memory space each pointer is valid in.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="690" y="410" width="500" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="v3" value="int size = n * sizeof(float);&lt;br&gt;&lt;i&gt;Recomputed locally &#8212; vecAdd() only received n, not the byte size main() already computed.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="690" y="600" width="500" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="v4" value="cudaMalloc((void**)&amp;A_d, size);&lt;br&gt;cudaMalloc((void**)&amp;B_d, size);&lt;br&gt;cudaMalloc((void**)&amp;C_d, size);&lt;br&gt;&lt;br&gt;&lt;i&gt;Why (void**): cudaMalloc must WRITE the new GPU address into your pointer variable. To modify a variable through a function call, C needs the address OF that variable &#8212; i.e. a pointer to the pointer. It's typed void** because cudaMalloc is type-agnostic; the cast tells the compiler to accept any pointer type there. Each call reserves &lt;b&gt;size&lt;/b&gt; bytes in DEVICE GLOBAL MEMORY (VRAM) &#8212; completely separate physical RAM from the host.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="690" y="720" width="500" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="v5" value="cudaMemcpy(A_d, A_h, size, cudaMemcpyHostToDevice);&lt;br&gt;cudaMemcpy(B_d, B_h, size, cudaMemcpyHostToDevice);&lt;br&gt;&lt;br&gt;&lt;i&gt;Why: host (CPU) and device (GPU) have physically separate DRAM. The GPU cannot reach into main()'s heap on its own &#8212; every byte has to be explicitly shipped across the PCIe bus. C_h/C_d are NOT copied here: there is no output yet, and copying it would be wasted bandwidth.&lt;br&gt;(see the Memory Map diagram below)&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="690" y="960" width="500" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="v6" value="&lt;b&gt;Part 2 &#8212; Kernel Launch Configuration&lt;/b&gt;&lt;br&gt;int threadsPerBlock = 256;&lt;br&gt;int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;&lt;br&gt;= (10000 + 255) / 256 = &lt;b&gt;40&lt;/b&gt;&lt;br&gt;&lt;br&gt;&lt;i&gt;Why the &amp;quot;+255&amp;quot;: plain integer division n/256 TRUNCATES (10000/256 = 39.06 &#8594; 39), which would drop the last 16 elements entirely. Adding (threadsPerBlock-1) before dividing forces a round-UP (ceiling) division, guaranteeing every element gets a thread even when n is not an exact multiple of 256.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="690" y="1200" width="500" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="v7" value="vecAddKernel&amp;lt;&amp;lt;&amp;lt;blocksPerGrid, threadsPerBlock&amp;gt;&amp;gt;&amp;gt;(A_d, B_d, C_d, n);&lt;br&gt;&lt;i&gt;(async &#8212; this line returns to the CPU immediately)&lt;/i&gt;&lt;br&gt;&lt;br&gt;&lt;i&gt;Why: &amp;lt;&amp;lt;&amp;lt;grid, block&amp;gt;&amp;gt;&amp;gt; is CUDA's launch syntax &#8212; here it means &amp;quot;create 40 blocks of 256 threads&amp;quot; = 10,240 threads, all running the same kernel code. Launching is asynchronous: the CPU queues the work and moves on to the next C++ statement without waiting.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="690" y="1460" width="500" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="v8" value="cudaMemcpy(C_h, C_d, size, cudaMemcpyDeviceToHost);&lt;br&gt;&lt;br&gt;&lt;i&gt;Why this line BLOCKS: on the default stream, cudaMemcpy is implicitly synchronizing &#8212; the CPU stalls here until every one of the 10,240 threads launched above has finished, THEN the driver copies the finished C_d buffer back across PCIe into C_h.&lt;br&gt;(see the Memory Map diagram below)&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#4a3aa7;strokeColor=#382b80;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;strokeWidth=2;" vertex="1" parent="1">
+          <mxGeometry x="690" y="1680" width="500" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="v9" value="&lt;b&gt;Part 3 &#8212; Cleanup&lt;/b&gt;&lt;br&gt;cudaFree(A_d);&lt;br&gt;cudaFree(B_d);&lt;br&gt;cudaFree(C_d);&lt;br&gt;&lt;br&gt;&lt;i&gt;Why: returns the three device allocations to the GPU's memory pool. Skipping this would leak VRAM for the lifetime of the process (or until the CUDA context is destroyed).&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="690" y="1900" width="500" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="v10" value="return;  (void function) &#8212; back to main()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#2a78d6;strokeColor=#184f95;fontColor=#ffffff;fontSize=12;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="690" y="2080" width="500" height="50" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== LANE 3: device kernel ===================== -->
+        <mxCell id="d0" value="GPU receives the launch request&lt;br&gt;&amp;lt;&amp;lt;&amp;lt;40, 256&amp;gt;&amp;gt;&amp;gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="220" width="520" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="d1" value="Grid = 40 blocks &#215; Block = 256 threads/block&lt;br&gt;= &lt;b&gt;10,240 threads&lt;/b&gt; created&lt;br&gt;(only 10,000 elements exist &#8212; 240 will be idle)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="350" width="520" height="130" as="geometry" />
+        </mxCell>
+        <mxCell id="d2" value="Every thread runs the SAME instructions (SIMT)&lt;br&gt;vecAddKernel(A_d, B_d, C_d, n)&lt;br&gt;independently, at (mostly) the same time" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="520" width="520" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="d3" value="int i = blockIdx.x * blockDim.x + threadIdx.x;&lt;br&gt;&lt;br&gt;&lt;i&gt;&lt;b&gt;blockIdx.x&lt;/b&gt;: which block this thread lives in (0..39)&lt;br&gt;&lt;b&gt;blockDim.x&lt;/b&gt;: threads per block, fixed at 256&lt;br&gt;&lt;b&gt;threadIdx.x&lt;/b&gt;: this thread's slot inside its block (0..255)&lt;br&gt;&lt;br&gt;Why: this formula flattens the 2-level hardware hierarchy (block, thread) into ONE global index, so all 10,240 threads get a unique i in [0, 10239] mapping onto the flat 1-D arrays A/B/C.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="680" width="520" height="230" as="geometry" />
+        </mxCell>
+        <mxCell id="d4" value="i &lt; n ?&lt;br&gt;(i &lt; 10000)" style="rhombus;whiteSpace=wrap;html=1;fillColor=#fbe0cf;strokeColor=#eb6834;fontColor=#0b0b0b;fontSize=12;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="1410" y="950" width="320" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="d5" value="C[i] = A[i] + B[i];&lt;br&gt;&lt;br&gt;Reads A_d[i], B_d[i] from device global memory, adds them, writes the sum into C_d[i]. This is the ONLY line of actual work in the whole program." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="1100" width="250" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="d6" value="Do nothing &#8212; thread exits.&lt;br&gt;&lt;br&gt;Guards against reading/writing past index 9999 into memory the GPU never allocated for A/B/C." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e34948;strokeColor=#a12a2a;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1580" y="1100" width="250" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="d7" value="Kernel instance retires (thread finishes)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=12;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1410" y="1280" width="320" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="boundaryNote" value="&lt;b&gt;Why the &amp;quot;if (i &amp;lt; n)&amp;quot; guard is essential:&lt;/b&gt;&lt;br&gt;blocksPerGrid was rounded UP to 40 (not 39.06), so the LAST block (blockIdx.x = 39) covers global indices i = 39&#215;256 .. 39&#215;256+255 = &lt;b&gt;9984 .. 10239&lt;/b&gt; &#8212; but the arrays only hold 10,000 valid elements (indices 0..9999).&lt;br&gt;&lt;br&gt;Without this check, the 240 threads with i &#8805; 10000 would read/write past the end of the cudaMalloc'd buffers &#8212; undefined behavior, silent memory corruption, or a crash. The guard simply lets those threads do nothing." style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#fff8e1;strokeColor=#d4a017;fontColor=#52514e;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1310" y="1390" width="520" height="240" as="geometry" />
+        </mxCell>
+
+        <!-- ===================== Lane control-flow edges ===================== -->
+        <mxCell id="me1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m1" target="m2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="me2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m2" target="m3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="me3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m3" target="m4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="me4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m4" target="m5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="me5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m5" target="m6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="me6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m6" target="m7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="me7" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;fontStyle=1;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m7" target="m7a"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="me8" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;fontStyle=1;exitX=1;exitY=0.5;entryX=1;entryY=0;" edge="1" parent="1" source="m7" target="m8"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="me9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m7a" target="m8"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="me10" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="m8" target="m9"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="ve1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v1" target="v2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ve2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v2" target="v3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ve3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v3" target="v4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ve4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v4" target="v5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ve5" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v5" target="v6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ve6" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v6" target="v7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ve7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v7" target="v8"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ve8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v8" target="v9"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="ve9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="v9" target="v10"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="de1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8a3413;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="d0" target="d1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8a3413;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="d1" target="d2"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8a3413;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="d2" target="d3"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8a3413;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="d3" target="d4"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de5" value="Yes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8a3413;strokeWidth=2;fontStyle=1;exitX=0.3;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="d4" target="d5"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de6" value="No" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#a12a2a;strokeWidth=2;fontStyle=1;exitX=0.7;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="d4" target="d6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de7" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8a3413;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.3;entryY=0;" edge="1" parent="1" source="d5" target="d7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de8" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#a12a2a;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.7;entryY=0;" edge="1" parent="1" source="d6" target="d7"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="de9" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;strokeColor=#a12a2a;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="d6" target="boundaryNote"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ===================== Cross-lane edges ===================== -->
+        <mxCell id="cross1" value="calls vecAdd()" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;fontSize=11;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="m5" target="v1"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="cross2" value="return (void)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#0b0b0b;strokeWidth=2;fontSize=11;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="v10" target="m6"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="cross3" value="async launch" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;strokeColor=#8a3413;fontColor=#8a3413;fontSize=11;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="v7" target="d0"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="cross4" value="kernel complete &#8594; memcpy D2H proceeds (implicit sync)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=open;dashed=1;strokeColor=#4a3aa7;fontColor=#4a3aa7;fontSize=11;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" edge="1" parent="1" source="d7" target="v8"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <!-- ===================== MEMORY MAP SECTION ===================== -->
+        <mxCell id="memTitle" value="Memory Spaces &amp; Data Movement (Host &#8596; Device)" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;fontColor=#0b0b0b;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2150" width="900" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="memSub" value="Where each variable physically lives at each stage of vecAdd() &#8212; the CPU and GPU never share an address space, so pointers only mean something on the side that allocated them." style="text;html=1;align=left;verticalAlign=middle;fontSize=13;fontColor=#52514e;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2185" width="1400" height="40" as="geometry" />
+        </mxCell>
+
+        <mxCell id="hostBG" value="HOST RAM (CPU main memory)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=14;fontSize=13;fontStyle=1;fontColor=#184f95;fillColor=#eaf1fb;strokeColor=#2a78d6;strokeWidth=2;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2240" width="780" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="devBG" value="DEVICE GLOBAL MEMORY (GPU VRAM)" style="rounded=1;whiteSpace=wrap;html=1;verticalAlign=top;align=left;spacingTop=10;spacingLeft=14;fontSize=13;fontStyle=1;fontColor=#1a6b34;fillColor=#e6f4ea;strokeColor=#2f9e44;strokeWidth=2;arcSize=4;" vertex="1" parent="1">
+          <mxGeometry x="1000" y="2240" width="780" height="220" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ah" value="A_h[0..9999]&lt;br&gt;values = 1.0f&lt;br&gt;allocated by malloc()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2a78d6;fontColor=#0b0b0b;fontSize=12;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="90" y="2300" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="bh" value="B_h[0..9999]&lt;br&gt;values = 2.0f&lt;br&gt;allocated by malloc()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2a78d6;fontColor=#0b0b0b;fontSize=12;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="340" y="2300" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="ch" value="C_h[0..9999]&lt;br&gt;uninitialized &#8594;&lt;br&gt;becomes 3.0f after step 4 below" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2a78d6;fontColor=#0b0b0b;fontSize=12;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="590" y="2300" width="230" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="ad" value="A_d&lt;br&gt;allocated by cudaMalloc&lt;br&gt;step 1: filled by cudaMemcpy H2D" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f9e44;fontColor=#0b0b0b;fontSize=12;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1030" y="2300" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="bd" value="B_d&lt;br&gt;allocated by cudaMalloc&lt;br&gt;step 1: filled by cudaMemcpy H2D" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f9e44;fontColor=#0b0b0b;fontSize=12;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1280" y="2300" width="230" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="cd" value="C_d&lt;br&gt;allocated, empty &#8594;&lt;br&gt;step 3: written by kernel threads" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#2f9e44;fontColor=#0b0b0b;fontSize=12;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="1530" y="2300" width="230" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="kernelBox" value="step 2: GPU Streaming Multiprocessors execute vecAddKernel &#8212; 10,240 threads read A_d, B_d and compute C_d[i] = A_d[i] + B_d[i]" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=12;arcSize=6;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="1180" y="2500" width="420" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="memNote" value="&lt;b&gt;Discrete GPU memory model:&lt;/b&gt; the CPU and GPU have separate physical DRAM. A pointer valid in one address space is meaningless (or a crash) in the other &#8212; you cannot dereference A_h on the GPU, nor A_d on the CPU. This is exactly why the code keeps two parallel sets of pointers (&lt;b&gt;_h&lt;/b&gt; = host, &lt;b&gt;_d&lt;/b&gt; = device) and why every transfer needs an explicit cudaMemcpy call &#8212; there is no automatic mirroring between them." style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#fff8e1;strokeColor=#d4a017;fontColor=#52514e;fontSize=12;arcSize=4;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2620" width="1720" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="memE1" value="cudaMemcpy H2D  (PCIe bus)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#184f95;strokeWidth=2;fontColor=#184f95;fontSize=11;exitX=1;exitY=0.3;entryX=0;entryY=0.3;" edge="1" parent="1" source="ah" target="ad"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="memE2" value="cudaMemcpy H2D  (PCIe bus)" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#184f95;strokeWidth=2;fontColor=#184f95;fontSize=11;exitX=1;exitY=0.3;entryX=0;entryY=0.3;" edge="1" parent="1" source="bh" target="bd"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="memE3" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8a3413;strokeWidth=2;exitX=0.3;exitY=1;entryX=0.2;entryY=0;" edge="1" parent="1" source="ad" target="kernelBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="memE4" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8a3413;strokeWidth=2;exitX=0.7;exitY=1;entryX=0.5;entryY=0;" edge="1" parent="1" source="bd" target="kernelBox"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="memE5" value="writes C_d[i]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#8a3413;strokeWidth=2;fontColor=#8a3413;fontSize=11;exitX=0.9;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="kernelBox" target="cd"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="memE6" value="cudaMemcpy D2H  (PCIe bus) &#8212; runs after the kernel finishes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=block;strokeColor=#184f95;strokeWidth=2;fontColor=#184f95;fontSize=11;exitX=0.5;exitY=1;entryX=0.5;entryY=1;" edge="1" parent="1" source="cd" target="ch"><mxGeometry relative="1" as="geometry"><Array as="points"><mxPoint x="1645" y="2470" /><mxPoint x="705" y="2470" /></Array></mxGeometry></mxCell>
+
+        <!-- ===================== GRID / THREAD INDEXING SECTION ===================== -->
+        <mxCell id="gridTitle" value="Grid &amp; Thread Indexing &#8212; mapping 40 blocks &#215; 256 threads onto a 10,000-element array" style="text;html=1;align=left;verticalAlign=middle;fontSize=18;fontStyle=1;fontColor=#0b0b0b;" vertex="1" parent="1">
+          <mxGeometry x="40" y="2780" width="1400" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="formulaBox" value="int i = blockIdx.x * blockDim.x + threadIdx.x;      &#8212;      blockIdx.x = which block (0..39)   |   blockDim.x = 256 (threads per block, fixed)   |   threadIdx.x = slot within the block (0..255)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fceee7;strokeColor=#eb6834;fontColor=#0b0b0b;fontSize=13;fontStyle=1;arcSize=4;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2815" width="1720" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="blk0" value="Block 0&lt;br&gt;threadIdx 0..255&lt;br&gt;i = 0 .. 255&lt;br&gt;(all valid)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=11;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="60" y="2935" width="150" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="blk1" value="Block 1&lt;br&gt;i = 256 .. 511&lt;br&gt;(all valid)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=11;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="230" y="2935" width="150" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="blk2" value="Block 2&lt;br&gt;i = 512 .. 767&lt;br&gt;(all valid)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=11;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="400" y="2935" width="150" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="blkDots" value="&#8230;" style="text;html=1;align=center;verticalAlign=middle;fontSize=24;fontStyle=1;fontColor=#8a3413;" vertex="1" parent="1">
+          <mxGeometry x="570" y="2935" width="80" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="blk38" value="Block 38&lt;br&gt;i = 9728 .. 9983&lt;br&gt;(all valid)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eb6834;strokeColor=#8a3413;fontColor=#ffffff;fontSize=11;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="670" y="2935" width="150" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="blk39" value="Block 39  (LAST BLOCK)&lt;br&gt;i = 9984 .. 10239&lt;br&gt;straddles the array boundary &#8212;&lt;br&gt;see split below" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbe0cf;strokeColor=#a12a2a;strokeWidth=3;fontColor=#0b0b0b;fontSize=11;fontStyle=1;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="840" y="2935" width="220" height="110" as="geometry" />
+        </mxCell>
+
+        <mxCell id="blk39valid" value="threadIdx 0..15&lt;br&gt;i = 9984 .. 9999&lt;br&gt;&lt;b&gt;VALID&lt;/b&gt; &#8594; if(i&lt;n) true&lt;br&gt;C[i]=A[i]+B[i] executes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e6f4ea;strokeColor=#2f9e44;fontColor=#0b0b0b;fontSize=11;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="840" y="3075" width="105" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="blk39invalid" value="threadIdx 16..255&lt;br&gt;i = 10000 .. 10239&lt;br&gt;&lt;b&gt;OUT OF BOUNDS&lt;/b&gt;&lt;br&gt;if(i&lt;n) is false &#8594; skipped" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fbe4e4;strokeColor=#a12a2a;fontColor=#0b0b0b;fontSize=11;arcSize=6;" vertex="1" parent="1">
+          <mxGeometry x="955" y="3075" width="105" height="140" as="geometry" />
+        </mxCell>
+
+        <mxCell id="gridEdge1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;dashed=1;strokeColor=#a12a2a;" edge="1" parent="1" source="blk39" target="blk39valid"><mxGeometry relative="1" as="geometry" /></mxCell>
+        <mxCell id="gridEdge2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;html=1;endArrow=none;dashed=1;strokeColor=#a12a2a;" edge="1" parent="1" source="blk39" target="blk39invalid"><mxGeometry relative="1" as="geometry" /></mxCell>
+
+        <mxCell id="summaryBox" value="&lt;b&gt;Total threads created&lt;/b&gt; = blocksPerGrid &#215; threadsPerBlock = 40 &#215; 256 = &lt;b&gt;10,240&lt;/b&gt;&lt;br&gt;&lt;b&gt;Elements actually needed&lt;/b&gt; = n = &lt;b&gt;10,000&lt;/b&gt;&lt;br&gt;&lt;b&gt;Idle / guarded threads&lt;/b&gt; = 240 (&#8776;2.3% of all launched threads) &#8212; they exist only because grid size must be a whole number of blocks.&lt;br&gt;&lt;br&gt;&lt;i&gt;If blocksPerGrid instead used plain truncating division (n/threadsPerBlock = 39, no +255), only 39&#215;256 = 9,984 threads would launch, covering i = 0..9983. The last &lt;b&gt;16 elements (indices 9984..9999) would never be computed&lt;/b&gt; &#8212; C_h[9984..9999] would stay uninitialized garbage and the verification loop in main() would report an error. The ceiling-division &amp;quot;+threadsPerBlock-1&amp;quot; trick exists specifically to prevent that.&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff8e1;strokeColor=#d4a017;dashed=1;fontColor=#52514e;fontSize=12;arcSize=4;align=left;spacingLeft=8;" vertex="1" parent="1">
+          <mxGeometry x="60" y="3235" width="1720" height="160" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

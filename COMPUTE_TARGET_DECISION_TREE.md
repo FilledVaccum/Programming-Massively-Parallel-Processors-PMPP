@@ -32,6 +32,26 @@ the lowest possible fixed latency and power, at the cost of engineering time
 and the inability to change your mind later. **Every hardware choice is a
 trade, not an upgrade.**
 
+The whole landscape, as one trade-off grid — flexibility (any algorithm)
+against fixedness (one hard-wired algorithm), and low-overhead/low-latency
+against high-overhead/high-throughput:
+
+```
+                FLEXIBLE (any algorithm)           FIXED (one hard-wired algorithm)
+               ┌──────────────────────────────────┬──────────────────────────────────┐
+LOW OVERHEAD   │  CPU                             │  FPGA / ASIC                     │
+LOW LATENCY    │  low latency per task,           │  lowest fixed latency possible,  │
+               │  modest throughput ceiling       │  longest dev time, zero pivot    │
+───────────────┼──────────────────────────────────┼──────────────────────────────────┤
+HIGH OVERHEAD  │  GPU                             │  TPU / AI ASIC                   │
+HIGH THROUGHPUT│  huge throughput on uniform,     │  huge throughput on ONE narrow   │
+               │  independent parallel work       │  op, pays off at hyperscale only │
+               └──────────────────────────────────┴──────────────────────────────────┘
+
+    distributed CPU/GPU cluster = many of any of the above cells, traded
+              again for scale against network coordination cost
+```
+
 ---
 
 ## 1. The gating questions, in order
@@ -80,6 +100,15 @@ pay before seeing any benefit:
 | Another CPU thread | ~1-10 microseconds (thread wake/sync) |
 | A GPU kernel launch + PCIe transfer | ~tens of microseconds launch + memory-transfer time proportional to data size |
 | Another machine over the network | ~0.1-1+ millisecond round trip, plus coordination |
+
+The same numbers, as relative bar lengths (log-scale impression, not to
+exact scale — always profile the real case rather than trust this picture):
+
+```
+Thread wake/sync        █░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  ~1-10 µs
+GPU launch + transfer   ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  ~10s of µs + size-dependent
+Network round trip      ████████████████████████████████████████ ~0.1-1+ ms
+```
 
 Rules of thumb (not laws — always profile a representative case, see Q7):
 
@@ -269,7 +298,20 @@ flattens matters more than pretending it's complete:
   orchestration, and irregular pre/post-processing, and hands only the
   regular numeric core to the GPU. The tree's leaves describe where the
   *bottleneck* work should run, not a rule that the entire program must
-  live on one processor.
+  live on one processor:
+
+  ```
+       Input data
+       │
+       ▼
+  ┌───────────────┐         ┌───────────────┐         ┌───────────────┐
+  │      CPU      │────────▶│      GPU      │────────▶│      CPU      │────▶ Output
+  │  I/O, parse,  │         │dense, uniform │         │ post-process, │
+  │  orchestrate  │         │ numeric core  │         │     write     │
+  └───────────────┘         └───────────────┘         └───────────────┘
+    irregular, branchy        ▲ the ONLY stage           irregular, branchy
+    work stays on CPU           the tree says "GPU" for   work stays on CPU
+  ```
 - **"GPU cluster" hides a real distinction: single-node multi-GPU vs.
   multi-node.** GPUs on the same node talk over NVLink/PCIe
   (microseconds, very high bandwidth); GPUs on different nodes talk over
@@ -277,7 +319,19 @@ flattens matters more than pretending it's complete:
   cross that boundary cheaply depends heavily on how much inter-GPU
   communication the algorithm needs (data-parallel training tolerates it
   far better than tightly-coupled simulations do) — a distinction the
-  Q6 leaf glosses over.
+  Q6 leaf glosses over:
+
+  ```
+  SINGLE NODE (fast link)              MULTI-NODE (slow link)
+  ┌─────────────────────────┐     ┌──────────┐        ┌──────────┐
+  │  CPU                    │     │  Node A  │        │  Node B  │
+  │   ├── GPU 0 ─┐          │     │ CPU+GPUs │◀──────▶│ CPU+GPUs │
+  │   ├── GPU 1  │ NVLink/  │     └──────────┘ Network └──────────┘
+  │   └── GPU 2 ─┘ PCIe     │
+  │     (µs, very high      │        (~0.1-1+ ms round trip,
+  │      bandwidth)         │         far lower bandwidth than
+  └─────────────────────────┘         NVLink/PCIe)
+  ```
 - **This is framed as a one-time decision — it isn't.** The right answer
   can change as a product's scale grows (a script that started on one CPU
   core can outgrow it within months), so the honest process is: answer the
@@ -323,7 +377,19 @@ Applying the tree honestly to this repo's own example, at its actual size
   (`A`,`B` in, `C` out) that are each individually likely to take **longer**
   than the CPU would take to just run the loop directly. At this exact
   size, **a plain CPU `for` loop is very plausibly faster end-to-end than
-  the GPU version**, once transfer overhead is counted honestly.
+  the GPU version**, once transfer overhead is counted honestly:
+
+  ```
+  CPU: plain loop            ██  ~10,000 adds, sub-microsecond on one core
+  GPU: cudaMalloc ×3         ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  GPU: memcpy H2D ×2         ████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  GPU: kernel launch+run     ██░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  GPU: memcpy D2H ×1         ████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+                              (illustrative proportions — the point is
+                               structural: the CPU bar is the actual work;
+                               every GPU bar past it is pure overhead that
+                               didn't exist on the CPU path at all)
+  ```
 - **Q4 (is it regular?)** Yes, maximally — which is *why* it's the right
   **teaching example** for kernel mechanics (Map is the simplest
   dependency pattern to reason about) even though it's a **poor example**

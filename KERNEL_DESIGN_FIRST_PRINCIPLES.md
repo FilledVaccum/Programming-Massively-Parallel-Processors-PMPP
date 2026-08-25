@@ -35,6 +35,34 @@ time — they optimize a kernel that was wrong to begin with.
 
 Everything below is that one question, expanded into a checklist.
 
+```
+ ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐
+ │Phase 0 │──▶│Phase 1 │──▶│Phase 2 │──▶│Phase 3 │──▶│Phase 4 │
+ │Under-  │   │One     │   │Grid /  │   │Plan    │   │Write   │
+ │stand + │   │thread  │   │block   │   │memory  │   │the     │
+ │classify│   │does    │   │shape   │   │layout  │   │naive,  │
+ │the     │   │what?   │   │(Tree B)│   │(Tree A)│   │correct │
+ │problem │   │        │   │        │   │        │   │kernel  │
+ └────────┘   └────────┘   └────────┘   └────────┘   └───┬────┘
+                                                           │
+ ┌────────┐   ┌────────┐   ┌────────┐   ┌────────┐        │
+ │Phase 8 │◀──│Phase 7 │◀──│Phase 6 │◀──│Phase 5 │◀───────┘
+ │Optimize│   │Profile.│   │Verify  │   │Host    │
+ │in the  │   │Don't   │   │vs. CPU │   │orches- │
+ │right   │   │guess.  │   │refer-  │   │tration │
+ │order   │   │        │   │ence    │   │        │
+ │(Tree C)│   │        │   │        │   │        │
+ └───┬────┘   └────────┘   └────────┘   └────────┘
+     │
+     └──▶ re-profile after every change; keep only what measurably
+           helps; discard the rest; loop back into Phase 8
+```
+
+Two rows, one direction of travel: left-to-right across the top (design and
+build), then right-to-left across the bottom (verify, measure, and only
+then improve) — with Phase 8 looping back on itself until you stop finding
+changes that measurably help.
+
 ---
 
 ## Phase 0 — Understand the problem *before* touching CUDA
@@ -62,6 +90,26 @@ Ask:
    | **Scan / prefix** | all *previous* inputs, in order | running total, prefix sum |
    | **Map+Reduce** | a full row/column of one input combined against another | matrix multiply |
    | **Gather/Scatter** | data-dependent, irregular addresses | sparse matmul, histograms, graphs |
+
+   The shapes behind those names — how far each pattern's "fan-in" reaches
+   is exactly what makes later patterns harder to parallelize than Map:
+
+   ```
+   Map                    Stencil                  Reduction
+   A[i]   B[i]            A[i-1] A[i] A[i+1]        A[0] A[1] A[2] ... A[n-1]
+     \   /                    \   |   /               \   \   |   /   /
+      C[i]                     C[i]                     combine ──▶ result
+   (every output          (each output reads a       (every output needs
+    independent)           small neighborhood)         ALL the inputs)
+
+   Scan / prefix               Map + Reduce              Gather / Scatter
+   A[0]        ─▶ C[0]         row i of A ────┐          thread i's target
+   A[0],A[1]   ─▶ C[1]                        ├─▶ dot   index is DATA-
+   A[0..2]     ─▶ C[2]         col j of B ────┘   product  DEPENDENT — computed
+      ⋮ (each depends            = C[i][j]                 at runtime, not a
+      on all previous)        (Map AND Reduce,              fixed offset from i
+                                per output element)
+   ```
 
    Map problems have zero cross-thread dependency — they're the easy case.
    Everything past Map means threads need to *see each other's work*, which
@@ -110,6 +158,25 @@ Ask:
   - communicate via **atomics** in global memory (works, but serializes —
     last resort, not first).
 
+```
+                          Grid
+              ┌─────────────┴─────────────┐
+           Block 0                      Block 1
+       [threads 0..255]              [threads 0..255]
+          │        ▲                    │        ▲
+          └────────┘                    └────────┘
+        __syncthreads()               __syncthreads()
+     (threads WITHIN a block       (a SEPARATE barrier — does
+      can freely sync with          NOT wait for Block 0, and
+      each other)                   Block 0 doesn't wait for it)
+
+              Block 0   ✕════ no direct sync ════✕   Block 1
+
+  The only grid-wide synchronization point is the END of the kernel
+  (i.e., a second, separate kernel launch) — or, as a workaround,
+  atomics in global memory.
+```
+
 If the answer to "do threads need to communicate" is *no* (pure Map), you're
 already most of the way to a working kernel. If it's *yes*, that answer is
 what tells you to reach for shared memory later, not global-memory chatter.
@@ -153,6 +220,27 @@ Now translate Phase 1's answer into actual launch geometry.
    guard those threads read/write past the end of your `cudaMalloc`'d
    buffers — undefined behavior, not a crash you can rely on seeing.
 
+Points 3 and 4 together, worked through on an actual size
+(`n=10000`, `threadsPerBlock=256` → `blocksPerGrid=40`):
+
+```
+Block 0        Block 1        Block 2    ...   Block 38       Block 39 (LAST)
+i=0..255       i=256..511     i=512..767  ...   i=9728..9983   i=9984..10239
+[ all valid ]  [ all valid ]  [ all valid] ...  [ all valid ]  [16 valid|240 OOB]
+                                                                    │        │
+                                                       i=9984..9999│i=10000..10239
+                                                       if(i<n) TRUE│if(i<n) FALSE
+                                                       C[i]=A[i]+B[i]  thread exits,
+                                                                        does nothing
+```
+
+`blocksPerGrid=40` (not 39) is *why* Block 39 exists at all and *why* it
+needs the guard: 39×256=9,984 would have silently dropped the last 16
+elements; 40×256=10,240 covers all 10,000 but creates 240 threads with
+nothing valid to do — exactly the threads the boundary guard exists for.
+(See `Chapter_2/diagrams/PMPP_Chapter_2-vecAddKernel_flow.drawio.xml` for
+the full-color version of this diagram.)
+
 ---
 
 ## Phase 3 — Plan the memory before you plan the math
@@ -185,6 +273,31 @@ arithmetic. Ask, for every array your kernel touches:
   means you are **compute-bound**, and the memory system is not your
   bottleneck. Knowing which regime you're in *before* writing code tells you
   which entire category of optimization is even worth attempting later.
+
+Where each of those four bullets' answers actually lives, in one picture —
+smaller and faster the higher up you go, bigger and slower the lower down:
+
+```
+                          ▲  fastest, smallest, most PRIVATE
+      ┌─────────────────────────────────┐
+      │           REGISTERS             │  per-thread   (~1 cycle)
+      ├─────────────────────────────────┤
+      │        SHARED MEMORY            │  per-block    (~a few cycles)
+      ├─────────────────────────────────┤
+      │           L2 CACHE              │  per-GPU      (tens of cycles)
+      ├─────────────────────────────────┤
+      │      GLOBAL MEMORY (VRAM)       │  per-GPU      (hundreds of cycles)
+      ├─────────────────────────────────┤
+      │      HOST RAM (via PCIe)        │  off-chip     (microseconds —
+      │                                 │                a different scale
+      │                                 │                entirely)
+      └─────────────────────────────────┘
+                          ▼  slowest, largest, most SHARED
+```
+
+Tree A (below) is the decision procedure for *which* level a given array
+belongs on; this pyramid is *why* that decision matters — every level down
+is an order of magnitude (or more) slower to touch than the one above it.
 
 ---
 
@@ -229,6 +342,22 @@ The host function's job is mechanical and the same shape every time:
 
 Don't reach for streams, pinned memory, or overlap-transfer-with-compute yet
 — that's a Phase 8 optimization, not a Phase 5 necessity.
+
+The six steps above, laid out on a timeline — notice which calls block the
+host and which don't:
+
+```
+HOST:   |malloc|cudaMalloc|memcpy H2D|launch<<<>>>|...free to run other code...|memcpy D2H (BLOCKS)|cudaFree|
+                                           │                                        ▲
+DEVICE:                                   └──────────── kernel executes ───────────┘
+                                             (async — host didn't wait to get here)   (host resumes
+                                                                                        only now)
+```
+
+The launch line (step 3) returns to the host immediately — that gap is
+real, exploitable time the host isn't required to spend waiting (Phase 8's
+overlap-transfer-with-compute lever lives in that gap). The `cudaMemcpy`
+D2H line (step 4) is where the waiting actually happens.
 
 ---
 
@@ -459,6 +588,21 @@ most of the design before you write a line of code:
 | Scan / prefix sum | Each output depends on all previous inputs | Strictly sequential dependency, parallelized via a trick | Hillis-Steele or Blelloch parallel scan (log₂n passes) | running totals |
 | Histogram | Many threads may write the *same* output bucket | Scatter with write collisions | Atomics, or per-block private histograms merged at the end | pixel-value histogram |
 | Sparse / irregular (graphs, sparse matrices) | Variable amount of work per thread | Data-dependent, unpredictable at compile time | Load balancing via work queues, thread-coarsening, or dynamic parallelism | SpMV, BFS |
+
+The same table, as a ladder — each rung needs strictly more machinery than
+the one below it, but climbs through the *same* nine phases to get there:
+
+```
+      harder dependency pattern, more required machinery
+low ─────────────────────────────────────────────────────────▶ high
+
+ Map            Stencil          Map+Reduce        Reduction/Scan       Sparse/Irregular
+(vecAdd)  ──▶  (convolution) ──▶ (matmul)     ──▶  (sum, prefix sum) ──▶ (graphs, SpMV)
+
+boundary        shared-mem        shared-mem tile    tree-reduce /        load balancing,
+guard only      halo tiles        of BOTH operands    warp shuffle        thread-coarsening,
+                                                                            dynamic parallelism
+```
 
 Every row still starts at Phase 0 ("what's the dependency pattern?") and ends
 at Phase 8 ("profile, then optimize in that order"). Complexity buys you a

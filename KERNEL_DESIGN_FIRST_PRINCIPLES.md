@@ -16,6 +16,13 @@ Work through the phases **in order**. Skipping ahead to "make it fast" before
 finishing "make it correct" is the single most common way beginners waste
 time — they optimize a kernel that was wrong to begin with.
 
+> **Before Phase 0:** this document assumes you've already decided the
+> workload belongs on a GPU. If you haven't answered *that* yet, start one
+> level up with
+> [`COMPUTE_TARGET_DECISION_TREE.md`](COMPUTE_TARGET_DECISION_TREE.md) —
+> "should this even run on a GPU, vs. CPU, vs. a cluster, vs. something
+> else?" is Phase −1, and it's easy to skip past by accident.
+
 ---
 
 ## 0. The one-sentence mental model

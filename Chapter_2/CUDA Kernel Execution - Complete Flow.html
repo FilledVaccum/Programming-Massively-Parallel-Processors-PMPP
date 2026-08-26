@@ -1,0 +1,756 @@
+<!DOCTYPE html>
+<html><head><style id="qw-theme">:root {
+  --color-bg: #ede4d0;
+  --color-text: #2c2418;
+  --color-navbar-bg: #e4dac4;
+  --color-bg-chat-view: #f4ecda;
+  --color-bg-secondary: #f7efdd;
+  --color-bg-tertiary: #e4dac4;
+  --color-bg-hover: #dbd0b8;
+  --color-surface: #e4dac4;
+  --color-surface-hover: #dbd0b8;
+  --color-surface-active: #d0c4aa;
+  --color-border: #cbbfa5;
+  --color-border-light: #ddd3bc;
+  --color-border-strong: #b5a78c;
+  --color-primary: #7a5030;
+  --color-primary-dark: #5e3d24;
+  --color-primary-light: #8b5e3c;
+  --color-primary-bg: #7a50300f;
+  --color-primary-hover-border: #5e3d24;
+  --color-nav-icon-active: #7a5030;
+  --color-nav-hover-border: #7a5030;
+  --color-primary-alpha-3: color-mix(in srgb, #7a5030 3%, transparent);
+  --color-primary-alpha-5: color-mix(in srgb, #7a5030 5%, transparent);
+  --color-primary-alpha-8: color-mix(in srgb, #7a5030 8%, transparent);
+  --color-primary-alpha-12: color-mix(in srgb, #7a5030 12%, transparent);
+  --color-primary-alpha-15: color-mix(in srgb, #7a5030 15%, transparent);
+  --color-primary-alpha-20: color-mix(in srgb, #7a5030 20%, transparent);
+  --color-primary-alpha-25: color-mix(in srgb, #7a5030 25%, transparent);
+  --color-primary-alpha-30: color-mix(in srgb, #7a5030 30%, transparent);
+  --color-primary-alpha-40: color-mix(in srgb, #7a5030 40%, transparent);
+  --color-primary-alpha-50: color-mix(in srgb, #7a5030 50%, transparent);
+  --color-primary-alpha-60: color-mix(in srgb, #7a5030 60%, transparent);
+  --color-primary-subtle: color-mix(in srgb, #7a5030 8%, transparent);
+  --color-primary-border: color-mix(in srgb, #7a5030 22%, transparent);
+  --color-focus-ring: color-mix(in srgb, #7a5030 35%, transparent);
+  --color-sidebar-hover: #5a462d0f;
+  --block-hover-outline: 1px dashed color-mix(in srgb, #7a5030 50%, transparent);
+  --block-selected-outline: 1px solid #8b5e3c;
+  --block-selection-outline-offset: 2px;
+  --block-selected-halo: 0 0 8px color-mix(in srgb, #7a5030 40%, transparent);
+  --color-accent: #7a5030;
+  --color-accent-foreground: #6b4528;
+  --color-accent-dark: #5e3d24;
+  --color-accent-light: #7a50300f;
+  --color-accent-inverse: #f7f0e0;
+  --color-link: #6b4528;
+  --color-primary-gradient-end: #7a50300a;
+  --color-primary-bg-solid: #f4ecda;
+  --color-user-bubble: #e8dfc8;
+  --color-user-bubble-text: #2c2418;
+  --color-text-secondary: #4a3f32;
+  --color-text-tertiary: #8a7e6e;
+  --color-text-muted: #918474;
+  --color-text-on-primary: #f7f0e0;
+  --color-success: #6b8a00;
+  --color-success-dark: #4a6000;
+  --color-success-light: #eaf0d0;
+  --color-success-hover: #5a7500;
+  --color-success-bg: #eaedce;
+  --color-success-border: #d4daa8;
+  --color-success-foreground: #6b8a00;
+  --color-success-dark-foreground: #4a6000;
+  --color-success-text: #4a6000;
+  --color-error: #c43e2a;
+  --color-error-dark: #962e1f;
+  --color-error-light: #fce4df;
+  --color-error-hover: #fce4df;
+  --color-error-bg: #f6e8de;
+  --color-error-border: #eecfc4;
+  --color-error-active-border: #c43e2a;
+  --color-error-foreground: #c43e2a;
+  --color-error-dark-foreground: #962e1f;
+  --color-error-inverse: #f7f0e0;
+  --color-error-text: #962e1f;
+  --color-warning: #a07800;
+  --color-warning-dark: #6e5200;
+  --color-warning-light: #f8edc5;
+  --color-warning-hover: #8a6800;
+  --color-warning-bg: #f9f0da;
+  --color-warning-border: #eddcaa;
+  --color-warning-foreground: #a07800;
+  --color-warning-dark-foreground: #6e5200;
+  --color-warning-inverse: #6e5200;
+  --color-surface-warning: #f8edc5;
+  --color-text-warning: #6e5200;
+  --color-info: #4a7fa0;
+  --color-info-dark: #35607a;
+  --color-info-light: #dce9f0;
+  --color-info-hover: #3d6d8a;
+  --color-info-bg: #eaecdf;
+  --color-info-border: #d4dcc8;
+  --color-info-foreground: #4a7fa0;
+  --color-info-dark-foreground: #35607a;
+  --color-info-inverse: #f7f0e0;
+  --color-overlay: #2c241873;
+  --color-shadow: #2c24181a;
+  --color-hover: #2c24180a;
+  --color-tooltip-bg: #2c2418;
+  --color-tooltip-text: #f7f0e0;
+  --color-voice-purple: #6c71c4;
+  --color-voice-purple-dark: #4a4e99;
+  --color-voice-purple-light: #6c71c4;
+  --color-voice-red: #c43e2a;
+  --color-voice-red-dark: #962e1f;
+  --color-voice-amber: #a07800;
+  --color-voice-purple-glow: #6c71c459;
+  --color-voice-red-glow: #c43e2a59;
+  --font-sans: "Amazon Ember", "Helvetica Neue", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", "Monaco", "Menlo", "Consolas", monospace;
+  --text-2xs: .5625rem;
+  --text-xs: .625rem;
+  --text-sm: .6875rem;
+  --text-base: .75rem;
+  --text-md: .8125rem;
+  --text-lg: .875rem;
+  --text-xl: 1rem;
+  --text-2xl: 1.125rem;
+  --text-3xl: 1.25rem;
+  --text-4xl: 1.5rem;
+  --text-5xl: 2rem;
+  --spacing-1: calc(.25rem * 1);
+  --spacing-1-5: calc(.25rem * 1.5);
+  --spacing-2: calc(.25rem * 2);
+  --spacing-3: calc(.25rem * 3);
+  --spacing-4: calc(.25rem * 4);
+  --spacing-5: calc(.25rem * 5);
+  --spacing-6: calc(.25rem * 6);
+  --spacing-7: calc(.25rem * 7);
+  --spacing-8: calc(.25rem * 8);
+  --spacing-9: calc(.25rem * 9);
+  --spacing-10: calc(.25rem * 10);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-card: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 8px;
+  --shadow-sm: 0 1px 3px #2c241812;
+  --shadow-md: 0 4px 14px #2c24181c;
+  --color-success-bg-solid: #eaf0d0;
+  --color-error-bg-solid: #fce4df;
+  --color-error-border-solid: #fce4df;
+  --color-warning-bg-solid: #f8edc5;
+  --color-warning-text: #4a3200;
+  --color-info-bg-solid: #dce9f0;
+  --color-info-bg-solid-alt: #dce9f0;
+  --color-info-text: #35607a;
+  --color-info-text-alt: #35607a;
+  --color-emerald: #6b8a00;
+  --color-teal: #4a7fa0;
+  --color-code-bg: #e4dac4;
+  --color-code-header-bg: #dbd0b8;
+  --color-code-text: #2c2418;
+  --color-code-border: #cbbfa5;
+  --color-code-muted: #918474;
+  --color-inline-code-bg: #e4dac4;
+  --color-inline-code-text: #4a3f32;
+  --color-inline-code-border: #cbbfa5;
+  --color-scrollbar-thumb: #b5a78c;
+  --color-scrollbar-track: transparent;
+  --color-graph-node-text: #2c2418;
+  --color-graph-node-text-dim: #918474;
+  --color-graph-edge-default: #b5a78c;
+  --color-graph-edge-cross: #cb4b16;
+  --color-graph-edge-text: #4a3f32;
+  --color-graph-edge-stroke: #f7f0e0;
+  --color-graph-highlight-bg: #c43e2a;
+  --color-graph-highlight-border: #962e1f;
+  --color-graph-search-bg: #a07800;
+  --color-graph-search-border: #8a6800;
+  --color-graph-focus-border: #c43e2a;
+  --color-graph-external-border: #b5a78c;
+  --color-graph-cat-file: #4a7fa0;
+  --color-graph-cat-folder: #8a7e6e;
+  --color-graph-cat-file-aggregate: #35607a;
+  --color-graph-cat-class: #6c71c4;
+  --color-graph-cat-function: #6b8a00;
+  --color-graph-cat-method: #8b5e3c;
+  --color-graph-cat-variable: #a07800;
+  --color-graph-cat-import: #cb4b16;
+  --color-graph-cat-module: #6c71c4;
+  --color-graph-cat-concept: #c43e2a;
+  --color-graph-cat-person: #b84a7a;
+  --color-graph-cat-org: #8b5e3c;
+  --color-graph-cat-organization: #8b5e3c;
+  --color-graph-cat-product: #6c71c4;
+  --color-graph-cat-metric: #b84a7a;
+  --color-graph-cat-location: #4a3f32;
+  --color-graph-cat-date: #b84a7a;
+  --color-graph-cat-code: #4a7fa0;
+  --color-graph-cat-doc: #8a7e6e;
+  --color-graph-cat-url: #8b5e3c;
+  --color-graph-cat-email: #6c71c4;
+  --color-graph-cat-unknown: #b5a78c;
+  --color-graph-rel-contains: #b5a78c;
+  --color-graph-rel-extends: #6c71c4;
+  --color-graph-rel-implements: #4a7fa0;
+  --color-graph-rel-imports: #cb4b16;
+  --color-graph-rel-uses: #6b8a00;
+  --color-graph-rel-calls: #6b8a00;
+  --color-graph-rel-references: #a07800;
+  --color-graph-rel-related-to: #b5a78c;
+  --color-graph-rel-works-on: #c43e2a;
+  --color-graph-rel-owns: #8b5e3c;
+  --color-graph-rel-depends-on: #cb4b16;
+  --color-graph-rel-parent-of: #b5a78c;
+  --qs-content: #fff;
+  --qs-main: #fff;
+  --qs-primary-foreground: #131920;
+  --qs-secondary-foreground: #656871;
+  --qs-tertiary-foreground: #918474;
+  --qs-placeholder-foreground: #8c8c94;
+  --qs-divider: #dedee3;
+  --qs-default-border: #8c8c94;
+  --qs-neutral-soft: #b4b4bb;
+  --qs-neutral-gray-50: #e4dac4;
+  --qs-tertiary-background: #e4dac4;
+  --qs-action-hover: #f3f3f7;
+  --qs-primary-default: #4200db;
+  --qs-primary-dark: #35009e;
+  --qs-primary-light: #e8e6ff;
+  --qs-success-default: #00802f;
+  --qs-error-default: #db0000;
+  --qs-font-sans: "Amazon Ember", "Helvetica Neue", "Segoe UI", Helvetica, Arial, sans-serif;
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+  --safe-left: 0px;
+  --safe-right: 0px;
+  --qs-font-family: "Amazon Ember", "Helvetica Neue", "Segoe UI", Helvetica, Arial, sans-serif;
+  --qs-font-base-letter-spacing: .15px;
+  --qs-shadow-sm: 0 0 2px 0 #00000029, 0 0 4px 0 #00000029;
+  --qs-shadow-md: 0 0 2px 0 #00000029, 0 2px 8px 1px #00000029;
+  --qs-shadow-lg: 0 4px 16px 4px #00000029, 0 2px 6px 1px #00000029;
+  --qs-shadow-xl: 0 4px 8px 2px #00000029, 0 6px 20px 4px #00000029;
+  --qs-width-modal-sm: 384px;
+  --qs-width-modal-md: 600px;
+  --qs-width-modal-lg: 1136px;
+  --qs-grid-gap: 16px;
+  --qs-grid-gap-xl: 24px;
+  --qs-primary-medium: #8575ff;
+  --qs-primary-inverse: #fff;
+  --qs-neutral-lightest: #f9f9fb;
+  --qs-neutral-light: #f3f3f7;
+  --qs-neutral-default: #dedee3;
+  --qs-neutral-medium: #8c8c94;
+  --qs-neutral-deep: #656871;
+  --qs-neutral-dark: #333843;
+  --qs-neutral-strong: #131920;
+  --qs-neutral-white: #fff;
+  --qs-neutral-black: #000;
+  --qs-success-medium: #005c26;
+  --qs-success-dark: #00471e;
+  --qs-success-light: #d9ffd6;
+  --qs-success-inverse: #fff;
+  --qs-info-default: #006ce0;
+  --qs-info-medium: #003b8f;
+  --qs-info-dark: #002a66;
+  --qs-info-light: #d1f1ff;
+  --qs-info-inverse: #fff;
+  --qs-warning-default: #f2b100;
+  --qs-warning-medium: #db9200;
+  --qs-warning-dark: #573a00;
+  --qs-warning-light: #fffbbd;
+  --qs-warning-inverse: #573a00;
+  --qs-warning-experimental: #f2b100;
+  --qs-warning-experimental-light: #fffbbd;
+  --qs-warning-experimental-light-foreground: #fffbbd;
+  --qs-error-medium: #900;
+  --qs-error-dark: #700000;
+  --qs-error-light: #ffe0e0;
+  --qs-error-inverse: #fff;
+  --qs-connection-default: #db3300;
+  --qs-connection-soft: #ff997a;
+  --qs-connection-light: #ffe0d6;
+  --qs-connection-dark: #661800;
+  --qs-automation-default: #b3008f;
+  --qs-automation-medium: #d600ba;
+  --qs-automation-soft: #ff94f1;
+  --qs-automation-light: #ffe0fb;
+  --qs-automation-dark: #660052;
+  --qs-insight-default: #a000b8;
+  --qs-insight-soft: #f299ff;
+  --qs-insight-light: #fce6ff;
+  --qs-insight-dark: #590066;
+  --qs-visualization-default: #7300e5;
+  --qs-visualization-soft: #d4a8ff;
+  --qs-visualization-light: #f2e5ff;
+  --qs-visualization-dark: #45008a;
+  --qs-spice: #ff9800;
+  --qs-coachmark: #006ce0;
+  --qs-brand: #fff;
+  --qs-brand-foreground: #131920;
+  --qs-brand-navbar: #131920;
+  --qs-brand-navbar-foreground: #fff;
+  --qs-brand-navbar-light: #dedee3;
+  --qs-brand-navbar-dark: #000;
+  --qs-application-navbar: #4200db;
+  --qs-application-navbar-foreground: #fff;
+  --qs-application-navbar-light: #e8e6ff;
+  --qs-application-navbar-dark: #35009e;
+  --qs-dimension: #4200db;
+  --qs-dimension-foreground: #fff;
+  --qs-dimension-experimental: #4200db;
+  --qs-dimension-experimental-foreground: #4200db;
+  --qs-measure: #00802f;
+  --qs-measure-foreground: #fff;
+  --qs-measure-experimental: #f2b100;
+  --qs-measure-experimental-foreground: #f2b100;
+  --qs-content-inverse: #333843;
+  --qs-content-inverse-active: #131920;
+  --qs-secondary: #dedee3;
+  --qs-disabled: #8c8c94;
+  --qs-divider-light: #f3f3f7;
+  --qs-hover-border: #333843;
+  --qs-active-border: #4200db;
+  --qs-disabled-border: #dedee3;
+  --qs-error-border: #ffe0e0;
+  --qs-error-active-border: #db0000;
+  --qs-disabled-foreground: #b4b4bb;
+  --qs-primary-inverse-foreground: #fff;
+  --qs-error-foreground: #db0000;
+  --qs-contrast-foreground: #131920;
+  --qs-main-foreground: #131920;
+  --qs-main-secondary-foreground: #656871;
+  --qs-action-disabled: #f3f3f7;
+  --qs-action-active: #e8e6ff;
+  --qs-default-badge: #dedee3;
+  --qs-tag-default: #dedee3;
+  --qs-tag-soft-border: #b4b4bb;
+  --qs-focus-offset: 1px;
+  --qs-toggle-tile-sm: calc(.25rem * 8);
+  --qs-toggle-tile-md: calc(.25rem * 12);
+  --qs-toggle-tile-lg: calc(.25rem * 15);
+  --qs-shadow-pin-right: inset 4px 0 4px -4px #00000029;
+  --qs-shadow-pin-left: inset -4px 0 4px -4px #00000029;
+  --react-pdf-text-layer: 1;
+  --highlight-bg-color: #b400aa;
+  --highlight-selected-bg-color: #006400;
+  --react-pdf-annotation-layer: 1;
+  --annotation-unfocused-field-background: url("data:image/svg+xml;charset=UTF-8,<svg width='1px' height='1px' xmlns='http://www.w3.org/2000/svg'><rect width='100%' height='100%' style='fill:rgba(0, 54, 255, 0.13);'/></svg>");
+  --input-focus-border-color: Highlight;
+  --input-focus-outline: 1px solid Canvas;
+  --input-unfocused-border-color: transparent;
+  --input-disabled-border-color: transparent;
+  --input-hover-border-color: black;
+  --link-outline: none;
+  color-scheme: light;
+}
+body { background: var(--color-bg); color: var(--color-text); }
+a { color: var(--color-link, var(--color-primary)); }</style>
+<meta charset="UTF-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; padding: 24px; line-height: 1.5; }
+h1 { font-size: 20px; font-weight: 700; text-align: center; margin-bottom: 4px; color: #f8fafc; }
+.subtitle { font-size: 12px; color: #94a3b8; text-align: center; margin-bottom: 24px; }
+
+/* Phases */
+.phase { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 20px; margin-bottom: 16px; position: relative; }
+.phase-header { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.phase-num { background: #3b82f6; color: white; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.phase-title { font-size: 14px; font-weight: 700; color: #f1f5f9; }
+.phase-where { font-size: 11px; color: #94a3b8; margin-left: auto; background: #334155; padding: 3px 10px; border-radius: 12px; }
+
+/* Code blocks */
+.code { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px 16px; font-family: 'SF Mono', Consolas, monospace; font-size: 12px; margin: 10px 0; overflow-x: auto; }
+.code .comment { color: #64748b; }
+.code .keyword { color: #c084fc; }
+.code .func { color: #fbbf24; }
+.code .string { color: #34d399; }
+.code .num { color: #fb923c; }
+
+/* Memory diagrams */
+.memory-row { display: flex; align-items: center; gap: 8px; margin: 8px 0; }
+.memory-label { font-size: 11px; color: #94a3b8; width: 80px; text-align: right; flex-shrink: 0; }
+.memory-cells { display: flex; gap: 2px; }
+.mem-cell { width: 40px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 11px; font-weight: 600; font-family: monospace; }
+.mem-cpu { background: #1e3a5f; border: 1px solid #3b82f6; color: #93c5fd; }
+.mem-gpu { background: #1a2e1a; border: 1px solid #22c55e; color: #86efac; }
+.mem-result { background: #3b1a1a; border: 1px solid #ef4444; color: #fca5a5; }
+
+/* Arrow between phases */
+.arrow-down { text-align: center; padding: 8px 0; font-size: 16px; color: #3b82f6; }
+.arrow-label { font-size: 10px; color: #64748b; background: #1e293b; padding: 2px 8px; border-radius: 8px; }
+
+/* GPU internal diagram */
+.gpu-box { background: #0f172a; border: 2px solid #22c55e; border-radius: 10px; padding: 16px; margin: 12px 0; }
+.gpu-title { font-size: 11px; font-weight: 700; color: #22c55e; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+
+.sm-box { background: #1a2e2a; border: 1px solid #2dd4bf; border-radius: 8px; padding: 12px; margin: 8px 0; }
+.sm-title { font-size: 11px; color: #2dd4bf; font-weight: 600; margin-bottom: 8px; }
+
+.warp-box { background: #0f172a; border: 1px dashed #475569; border-radius: 6px; padding: 10px; margin: 6px 0; }
+.warp-title { font-size: 10px; color: #94a3b8; margin-bottom: 6px; }
+
+.thread-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 3px; }
+.thread-cell { background: #1e293b; border: 1px solid #475569; border-radius: 4px; padding: 4px 2px; text-align: center; font-size: 9px; font-family: monospace; }
+.thread-cell .tid { color: #93c5fd; font-weight: 600; }
+.thread-cell .idx { color: #fbbf24; font-size: 8px; }
+.thread-cell .val { color: #86efac; font-size: 8px; }
+
+/* Register file */
+.reg-table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+.reg-table th { font-size: 10px; color: #94a3b8; text-align: left; padding: 4px 8px; border-bottom: 1px solid #334155; }
+.reg-table td { font-size: 10px; color: #e2e8f0; padding: 4px 8px; border-bottom: 1px solid #1e293b; font-family: monospace; }
+
+/* Flow arrow */
+.flow-connector { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 0; }
+.flow-line { height: 2px; width: 40px; background: #3b82f6; }
+.flow-text { font-size: 10px; color: #94a3b8; white-space: nowrap; }
+
+/* Timeline */
+.timeline { margin: 12px 0; }
+.timeline-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid #1e293b; }
+.timeline-cycle { font-size: 10px; color: #64748b; width: 60px; flex-shrink: 0; font-family: monospace; }
+.timeline-action { font-size: 11px; color: #e2e8f0; flex: 1; }
+.timeline-where { font-size: 10px; color: #94a3b8; background: #334155; padding: 2px 6px; border-radius: 4px; }
+
+/* Legend */
+.legend { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 8px; padding: 10px; background: #0f172a; border-radius: 8px; border: 1px solid #334155; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 10px; color: #94a3b8; }
+.legend-swatch { width: 12px; height: 12px; border-radius: 3px; }
+
+/* Data transfer visual */
+.transfer { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 12px 0; padding: 12px; }
+.transfer-box { padding: 10px 16px; border-radius: 8px; text-align: center; }
+.transfer-box.cpu { background: #1e3a5f; border: 1px solid #3b82f6; }
+.transfer-box.gpu { background: #1a2e1a; border: 1px solid #22c55e; }
+.transfer-box .label { font-size: 10px; color: #94a3b8; }
+.transfer-box .name { font-size: 12px; font-weight: 600; color: #f1f5f9; }
+.transfer-arrow { color: #fbbf24; font-size: 20px; }
+.transfer-desc { font-size: 9px; color: #94a3b8; text-align: center; }
+
+/* Instruction breakdown */
+.instr-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #1e293b; }
+.instr-code { font-family: monospace; font-size: 11px; color: #fbbf24; flex: 1; min-width: 0; }
+.instr-type { font-size: 10px; padding: 2px 8px; border-radius: 4px; flex-shrink: 0; }
+.instr-compute { background: #312e81; color: #a5b4fc; }
+.instr-load { background: #1a3a2a; color: #86efac; }
+.instr-store { background: #3b1a1a; color: #fca5a5; }
+</style>
+</head>
+<body>
+
+<h1>CUDA Kernel Execution — Complete End-to-End Flow</h1>
+<p class="subtitle">Example: scale() kernel — multiply every element by 2 | &lt;&lt;&lt;1, 8&gt;&gt;&gt; = 1 block, 8 threads</p>
+
+<!-- PHASE 1: CPU Allocates -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">1</div>
+    <div class="phase-title">CPU Creates Data in RAM</div>
+    <div class="phase-where">CPU / RAM</div>
+  </div>
+  <div class="code">
+    <span class="keyword">int</span> hostData[8] = {<span class="num">10, 20, 30, 40, 50, 60, 70, 80</span>};
+  </div>
+  <div class="memory-row">
+    <div class="memory-label">CPU RAM:</div>
+    <div class="memory-cells">
+      <div class="mem-cell mem-cpu">10</div>
+      <div class="mem-cell mem-cpu">20</div>
+      <div class="mem-cell mem-cpu">30</div>
+      <div class="mem-cell mem-cpu">40</div>
+      <div class="mem-cell mem-cpu">50</div>
+      <div class="mem-cell mem-cpu">60</div>
+      <div class="mem-cell mem-cpu">70</div>
+      <div class="mem-cell mem-cpu">80</div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow-down">▼ <span class="arrow-label">cudaMalloc — reserve 32 bytes on GPU</span></div>
+
+<!-- PHASE 2: Allocate GPU memory -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">2</div>
+    <div class="phase-title">Allocate Empty Space on GPU</div>
+    <div class="phase-where">GPU / VRAM</div>
+  </div>
+  <div class="code">
+    <span class="keyword">int</span> *deviceData;<br>
+    <span class="func">cudaMalloc</span>(&amp;deviceData, 8 * <span class="keyword">sizeof</span>(<span class="keyword">int</span>)); <span class="comment">// 32 bytes in VRAM</span>
+  </div>
+  <div class="memory-row">
+    <div class="memory-label">VRAM:</div>
+    <div class="memory-cells">
+      <div class="mem-cell mem-gpu" style="opacity:0.4">?</div>
+      <div class="mem-cell mem-gpu" style="opacity:0.4">?</div>
+      <div class="mem-cell mem-gpu" style="opacity:0.4">?</div>
+      <div class="mem-cell mem-gpu" style="opacity:0.4">?</div>
+      <div class="mem-cell mem-gpu" style="opacity:0.4">?</div>
+      <div class="mem-cell mem-gpu" style="opacity:0.4">?</div>
+      <div class="mem-cell mem-gpu" style="opacity:0.4">?</div>
+      <div class="mem-cell mem-gpu" style="opacity:0.4">?</div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow-down">▼ <span class="arrow-label">cudaMemcpy — copy data from CPU RAM → GPU VRAM</span></div>
+
+<!-- PHASE 3: Copy data -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">3</div>
+    <div class="phase-title">Copy Data: CPU → GPU (over PCIe bus)</div>
+    <div class="phase-where">PCIe Transfer</div>
+  </div>
+  <div class="code">
+    <span class="func">cudaMemcpy</span>(deviceData, hostData, 32, <span class="string">cudaMemcpyHostToDevice</span>);
+  </div>
+  <div class="transfer">
+    <div class="transfer-box cpu">
+      <div class="label">CPU RAM</div>
+      <div class="name">hostData[]</div>
+      <div style="font-size:9px;color:#93c5fd;margin-top:4px;">10,20,30,40,50,60,70,80</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="transfer-arrow">══════▶</div>
+      <div class="transfer-desc">PCIe bus<br>~16 GB/s</div>
+    </div>
+    <div class="transfer-box gpu">
+      <div class="label">GPU VRAM</div>
+      <div class="name">deviceData[]</div>
+      <div style="font-size:9px;color:#86efac;margin-top:4px;">10,20,30,40,50,60,70,80</div>
+    </div>
+  </div>
+  <div class="memory-row">
+    <div class="memory-label">VRAM now:</div>
+    <div class="memory-cells">
+      <div class="mem-cell mem-gpu">10</div>
+      <div class="mem-cell mem-gpu">20</div>
+      <div class="mem-cell mem-gpu">30</div>
+      <div class="mem-cell mem-gpu">40</div>
+      <div class="mem-cell mem-gpu">50</div>
+      <div class="mem-cell mem-gpu">60</div>
+      <div class="mem-cell mem-gpu">70</div>
+      <div class="mem-cell mem-gpu">80</div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow-down">▼ <span class="arrow-label">Kernel Launch — CPU tells GPU to create workers</span></div>
+
+<!-- PHASE 4: Kernel Launch -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">4</div>
+    <div class="phase-title">Kernel Launch: CPU → GPU "Start working!"</div>
+    <div class="phase-where">CPU issues command</div>
+  </div>
+  <div class="code">
+    <span class="func">scale</span>&lt;&lt;<span class="num">1</span>, <span class="num">8</span>&gt;&gt;(deviceData); <span class="comment">// 1 block, 8 threads, pass pointer</span>
+  </div>
+  <div style="margin-top:10px; font-size:11px; color:#94a3b8;">
+    <div style="margin-bottom:6px;">What the GPU receives:</div>
+    <table style="width:100%;">
+      <tbody><tr><td style="color:#c084fc;width:140px;font-family:monospace;font-size:11px;">gridDim.x = 1</td><td style="font-size:11px;color:#94a3b8;">→ 1 block in the grid</td></tr>
+      <tr><td style="color:#c084fc;font-family:monospace;font-size:11px;">blockDim.x = 8</td><td style="font-size:11px;color:#94a3b8;">→ 8 threads per block</td></tr>
+      <tr><td style="color:#c084fc;font-family:monospace;font-size:11px;">data = 0x7f4a...</td><td style="font-size:11px;color:#94a3b8;">→ VRAM address of the array</td></tr>
+    </tbody></table>
+  </div>
+  <div style="margin-top:12px; padding:8px 12px; background:#312e81; border-radius:6px; font-size:11px; color:#a5b4fc;">
+    CPU does NOT wait here! It continues to the next line immediately (async launch). GPU starts working independently.
+  </div>
+</div>
+
+<div class="arrow-down">▼ <span class="arrow-label">GPU creates threads and assigns them to hardware</span></div>
+
+<!-- PHASE 5: GPU Execution -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">5</div>
+    <div class="phase-title">GPU Execution: 8 Threads Run the Kernel</div>
+    <div class="phase-where">GPU / SM / Cores</div>
+  </div>
+
+  <div class="code" style="margin-bottom:14px;">
+    <span class="keyword">__global__</span> <span class="keyword">void</span> <span class="func">scale</span>(<span class="keyword">int</span> *data) {<br>
+    &nbsp;&nbsp;<span class="keyword">int</span> i = blockIdx.x * blockDim.x + threadIdx.x; <span class="comment">// compute index</span><br>
+    &nbsp;&nbsp;<span class="keyword">int</span> value = data[i]; <span class="comment">// load from VRAM</span><br>
+    &nbsp;&nbsp;data[i] = value * <span class="num">2</span>; <span class="comment">// compute + store</span><br>
+    }
+  </div>
+
+  <!-- Instructions breakdown -->
+  <div style="font-size:11px; color:#94a3b8; margin-bottom:8px; font-weight:600;">Each thread executes 3 instructions:</div>
+  <div class="instr-row">
+    <div class="instr-code">i = 0 * 8 + threadIdx.x</div>
+    <div class="instr-type instr-compute">COMPUTE (ALU)</div>
+    <div style="font-size:10px;color:#64748b;">1 cycle</div>
+  </div>
+  <div class="instr-row">
+    <div class="instr-code">value = data[i]</div>
+    <div class="instr-type instr-load">LOAD (VRAM)</div>
+    <div style="font-size:10px;color:#64748b;">~400 cycles</div>
+  </div>
+  <div class="instr-row">
+    <div class="instr-code">data[i] = value * 2</div>
+    <div class="instr-type instr-store">COMPUTE + STORE</div>
+    <div style="font-size:10px;color:#64748b;">1 + ~400 cycles</div>
+  </div>
+
+  <!-- GPU internal -->
+  <div class="gpu-box">
+    <div class="gpu-title">GPU Hardware — Inside the Chip</div>
+    
+    <div class="sm-box">
+      <div class="sm-title">SM #0 (Block 0 assigned here)</div>
+      
+      <div class="warp-box">
+        <div class="warp-title">Warp 0 — Threads 0-7 execute in LOCKSTEP (same instruction, same clock)</div>
+        <div class="thread-grid">
+          <div class="thread-cell"><div class="tid">T0</div><div class="idx">i=0</div><div class="val">10→20</div></div>
+          <div class="thread-cell"><div class="tid">T1</div><div class="idx">i=1</div><div class="val">20→40</div></div>
+          <div class="thread-cell"><div class="tid">T2</div><div class="idx">i=2</div><div class="val">30→60</div></div>
+          <div class="thread-cell"><div class="tid">T3</div><div class="idx">i=3</div><div class="val">40→80</div></div>
+          <div class="thread-cell"><div class="tid">T4</div><div class="idx">i=4</div><div class="val">50→100</div></div>
+          <div class="thread-cell"><div class="tid">T5</div><div class="idx">i=5</div><div class="val">60→120</div></div>
+          <div class="thread-cell"><div class="tid">T6</div><div class="idx">i=6</div><div class="val">70→140</div></div>
+          <div class="thread-cell"><div class="tid">T7</div><div class="idx">i=7</div><div class="val">80→160</div></div>
+        </div>
+      </div>
+
+      <!-- Register file -->
+      <div style="margin-top:10px; font-size:11px; color:#94a3b8; font-weight:600;">Register File (private per thread):</div>
+      <table class="reg-table">
+        <tbody><tr><th>Thread</th><th>Register: i</th><th>Register: value</th><th>Register: result</th></tr>
+        <tr><td>T0</td><td>0</td><td>10</td><td>20</td></tr>
+        <tr><td>T1</td><td>1</td><td>20</td><td>40</td></tr>
+        <tr><td>T2</td><td>2</td><td>30</td><td>60</td></tr>
+        <tr><td>T3</td><td>3</td><td>40</td><td>80</td></tr>
+        <tr><td>T4</td><td>4</td><td>50</td><td>100</td></tr>
+        <tr><td>T5</td><td>5</td><td>60</td><td>120</td></tr>
+        <tr><td>T6</td><td>6</td><td>70</td><td>140</td></tr>
+        <tr><td>T7</td><td>7</td><td>80</td><td>160</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div style="font-size:11px; color:#94a3b8; font-weight:600; margin-top:12px;">Timeline for Thread #3:</div>
+  <div class="timeline">
+    <div class="timeline-row"><div class="timeline-cycle">Cycle 1</div><div class="timeline-action">Born — assigned to Core 3</div><div class="timeline-where">SM</div></div>
+    <div class="timeline-row"><div class="timeline-cycle">Cycle 2</div><div class="timeline-action">Reads blockIdx.x=0, blockDim.x=8, threadIdx.x=3</div><div class="timeline-where">Special Regs</div></div>
+    <div class="timeline-row"><div class="timeline-cycle">Cycle 3</div><div class="timeline-action">Computes i = 0×8+3 = <strong>3</strong></div><div class="timeline-where">ALU → Register</div></div>
+    <div class="timeline-row"><div class="timeline-cycle">Cycle 4</div><div class="timeline-action">Sends "LOAD data[3]" to memory controller</div><div class="timeline-where">Memory Bus</div></div>
+    <div class="timeline-row"><div class="timeline-cycle">5–404</div><div class="timeline-action" style="color:#fbbf24;">⏳ Waiting for VRAM (~400 cycles). GPU runs other warps.</div><div class="timeline-where">Stalled</div></div>
+    <div class="timeline-row"><div class="timeline-cycle">Cycle 405</div><div class="timeline-action">Value <strong>40</strong> arrives → stored in register</div><div class="timeline-where">Register</div></div>
+    <div class="timeline-row"><div class="timeline-cycle">Cycle 406</div><div class="timeline-action">Computes 40 × 2 = <strong>80</strong></div><div class="timeline-where">ALU → Register</div></div>
+    <div class="timeline-row"><div class="timeline-cycle">Cycle 407</div><div class="timeline-action">Sends "STORE 80 → data[3]" to memory controller</div><div class="timeline-where">Memory Bus</div></div>
+    <div class="timeline-row"><div class="timeline-cycle">~807</div><div class="timeline-action" style="color:#22c55e;">✓ Write confirmed. Thread done.</div><div class="timeline-where">Complete</div></div>
+  </div>
+
+  <!-- VRAM After -->
+  <div style="font-size:11px; color:#94a3b8; font-weight:600; margin-top:12px;">VRAM after all threads finish:</div>
+  <div class="memory-row" style="margin-top:6px;">
+    <div class="memory-label" style="color:#64748b;">Before:</div>
+    <div class="memory-cells">
+      <div class="mem-cell mem-gpu">10</div><div class="mem-cell mem-gpu">20</div><div class="mem-cell mem-gpu">30</div><div class="mem-cell mem-gpu">40</div>
+      <div class="mem-cell mem-gpu">50</div><div class="mem-cell mem-gpu">60</div><div class="mem-cell mem-gpu">70</div><div class="mem-cell mem-gpu">80</div>
+    </div>
+  </div>
+  <div class="memory-row">
+    <div class="memory-label" style="color:#ef4444;">After:</div>
+    <div class="memory-cells">
+      <div class="mem-cell mem-result">20</div><div class="mem-cell mem-result">40</div><div class="mem-cell mem-result">60</div><div class="mem-cell mem-result">80</div>
+      <div class="mem-cell mem-result">100</div><div class="mem-cell mem-result">120</div><div class="mem-cell mem-result">140</div><div class="mem-cell mem-result">160</div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow-down">▼ <span class="arrow-label">cudaDeviceSynchronize — CPU waits for GPU to finish</span></div>
+
+<!-- PHASE 6: Sync -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">6</div>
+    <div class="phase-title">Synchronize: CPU Waits for GPU</div>
+    <div class="phase-where">CPU blocks here</div>
+  </div>
+  <div class="code">
+    <span class="func">cudaDeviceSynchronize</span>(); <span class="comment">// CPU halts until ALL GPU threads complete</span>
+  </div>
+  <div style="font-size:11px; color:#94a3b8; margin-top:6px;">Without this, the CPU might try to copy results back before the GPU is done.</div>
+</div>
+
+<div class="arrow-down">▼ <span class="arrow-label">cudaMemcpy — copy results from GPU VRAM → CPU RAM</span></div>
+
+<!-- PHASE 7: Copy back -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">7</div>
+    <div class="phase-title">Copy Results: GPU → CPU</div>
+    <div class="phase-where">PCIe Transfer</div>
+  </div>
+  <div class="code">
+    <span class="func">cudaMemcpy</span>(hostData, deviceData, 32, <span class="string">cudaMemcpyDeviceToHost</span>);
+  </div>
+  <div class="transfer">
+    <div class="transfer-box gpu">
+      <div class="label">GPU VRAM</div>
+      <div class="name">deviceData[]</div>
+      <div style="font-size:9px;color:#86efac;margin-top:4px;">20,40,60,80,100,120,140,160</div>
+    </div>
+    <div style="text-align:center;">
+      <div class="transfer-arrow">══════▶</div>
+      <div class="transfer-desc">PCIe bus<br>~16 GB/s</div>
+    </div>
+    <div class="transfer-box cpu">
+      <div class="label">CPU RAM</div>
+      <div class="name">hostData[]</div>
+      <div style="font-size:9px;color:#93c5fd;margin-top:4px;">20,40,60,80,100,120,140,160</div>
+    </div>
+  </div>
+</div>
+
+<div class="arrow-down">▼ <span class="arrow-label">cudaFree — release GPU memory</span></div>
+
+<!-- PHASE 8: Cleanup -->
+<div class="phase">
+  <div class="phase-header">
+    <div class="phase-num">8</div>
+    <div class="phase-title">Cleanup: Free GPU Memory</div>
+    <div class="phase-where">GPU VRAM</div>
+  </div>
+  <div class="code">
+    <span class="func">cudaFree</span>(deviceData); <span class="comment">// release the 32 bytes in VRAM</span>
+  </div>
+</div>
+
+<!-- LEGEND -->
+<div style="margin-top:20px;">
+  <div style="font-size:12px; font-weight:700; color:#f1f5f9; margin-bottom:8px;">Legend / Vocabulary:</div>
+  <div class="legend">
+    <div class="legend-item"><div class="legend-swatch" style="background:#1e3a5f;border:1px solid #3b82f6;"></div> CPU / RAM</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#1a2e1a;border:1px solid #22c55e;"></div> GPU / VRAM</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#312e81;border:1px solid #6366f1;"></div> Compute (ALU)</div>
+    <div class="legend-item"><div class="legend-swatch" style="background:#3b1a1a;border:1px solid #ef4444;"></div> Result / Output</div>
+  </div>
+  <table style="width:100%; margin-top:12px; font-size:11px; border-collapse:collapse;">
+    <tbody><tr style="border-bottom:1px solid #334155;"><td style="padding:6px;color:#fbbf24;width:120px;">Thread</td><td style="padding:6px;color:#94a3b8;">A worker — one copy of the kernel function running on one core</td></tr>
+    <tr style="border-bottom:1px solid #334155;"><td style="padding:6px;color:#fbbf24;">Instruction</td><td style="padding:6px;color:#94a3b8;">One operation: compute (ALU), load (read VRAM), store (write VRAM)</td></tr>
+    <tr style="border-bottom:1px solid #334155;"><td style="padding:6px;color:#fbbf24;">Data</td><td style="padding:6px;color:#94a3b8;">The actual values (10, 20...) sitting in VRAM</td></tr>
+    <tr style="border-bottom:1px solid #334155;"><td style="padding:6px;color:#fbbf24;">Index (i)</td><td style="padding:6px;color:#94a3b8;">The address each thread computes — NOT the thread itself</td></tr>
+    <tr style="border-bottom:1px solid #334155;"><td style="padding:6px;color:#fbbf24;">Register</td><td style="padding:6px;color:#94a3b8;">Private fast variable slot on the core (0 cycles, per-thread)</td></tr>
+    <tr style="border-bottom:1px solid #334155;"><td style="padding:6px;color:#fbbf24;">Pointer (*data)</td><td style="padding:6px;color:#94a3b8;">VRAM starting address, passed from CPU to kernel</td></tr>
+    <tr style="border-bottom:1px solid #334155;"><td style="padding:6px;color:#fbbf24;">Kernel</td><td style="padding:6px;color:#94a3b8;">The GPU function itself — the "job description"</td></tr>
+    <tr><td style="padding:6px;color:#fbbf24;">Launch &lt;&lt;&lt;&gt;&gt;&gt;</td><td style="padding:6px;color:#94a3b8;">CPU command that creates all threads and starts GPU execution</td></tr>
+  </tbody></table>
+</div>
+
+
+
+</body></html>

@@ -3,6 +3,8 @@ Chapter_2/block
 Chapter_2/hello_gpu
 Chapter_2/vecAddKernel
 Chapter_3/grayscale
+Chapter_3/grid2d
+Chapter_3/linearize
 *.o
 *.out
 *.obj

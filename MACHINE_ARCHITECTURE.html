@@ -1,0 +1,1398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Complete Machine Architecture — AMD EPYC 7R13 + NVIDIA L4 (AD104)</title>
+<style>
+:root{
+  --bg:#0b0e14; --bg2:#11151f; --bg3:#161b26; --line:#252c3b; --line2:#333c4f;
+  --tx:#d7dde8; --tx2:#98a3b8; --tx3:#6b7689;
+  /* domain colors */
+  --host:#4a9eff;      --host-bg:#4a9eff14;
+  --dram:#8b93a8;      --dram-bg:#8b93a814;
+  --fabric:#f0a848;    --fabric-bg:#f0a84814;
+  --logic:#3ecf8e;     --logic-bg:#3ecf8e14;
+  --sram:#b57bff;      --sram-bg:#b57bff14;
+  --vram:#ff6b8a;      --vram-bg:#ff6b8a14;
+  --fixed:#f6d365;     --fixed-bg:#f6d36514;
+  --sw:#5eead4;        --sw-bg:#5eead414;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);
+  font:14px/1.6 var(--mono);-webkit-font-smoothing:antialiased}
+a{color:var(--host);text-decoration:none}
+a:hover{text-decoration:underline}
+
+/* ── layout ───────────────────────────────────────── */
+.wrap{max-width:1580px;margin:0 auto;padding:0 24px 140px}
+header.top{padding:44px 0 22px;border-bottom:1px solid var(--line)}
+h1{font-size:25px;margin:0 0 6px;letter-spacing:-.4px;font-weight:600}
+.sub{color:var(--tx2);font-size:13px}
+.sub b{color:var(--tx);font-weight:600}
+
+nav{position:sticky;top:0;z-index:60;background:#0b0e14f2;backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);padding:9px 0;margin-bottom:34px}
+nav .inner{max-width:1580px;margin:0 auto;padding:0 24px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+nav a{font-size:11px;color:var(--tx2);padding:3px 8px;border:1px solid var(--line);border-radius:4px;white-space:nowrap}
+nav a:hover{color:var(--tx);border-color:var(--line2);background:var(--bg3);text-decoration:none}
+nav button{font:inherit;font-size:11px;color:var(--tx2);background:none;border:1px solid var(--line);
+  border-radius:4px;padding:3px 8px;cursor:pointer;margin-left:auto}
+nav button:hover{color:var(--tx);border-color:var(--line2)}
+
+section{margin:0 0 60px;scroll-margin-top:60px}
+h2{font-size:17px;margin:0 0 4px;font-weight:600;display:flex;align-items:baseline;gap:10px}
+h2 .num{color:var(--tx3);font-size:12px;font-weight:400;min-width:26px}
+h2 .tog{margin-left:auto;font-size:10px;color:var(--tx3);border:1px solid var(--line);
+  border-radius:3px;padding:2px 6px;cursor:pointer;user-select:none;font-weight:400}
+.lede{color:var(--tx2);font-size:12.5px;margin:0 0 22px;padding-left:36px;max-width:1000px}
+h3{font-size:13px;margin:30px 0 12px;color:var(--tx);font-weight:600;
+  text-transform:uppercase;letter-spacing:.9px;border-left:3px solid var(--line2);padding-left:9px}
+h4{font-size:11.5px;margin:18px 0 8px;color:var(--tx2);font-weight:600;letter-spacing:.5px;text-transform:uppercase}
+p{margin:0 0 12px;color:var(--tx2);font-size:12.5px;max-width:1050px}
+.collapsed .body{display:none}
+
+/* ── chip / block primitives ──────────────────────── */
+.chip{border:1px solid var(--line2);border-radius:8px;background:var(--bg2);margin:0 0 4px;overflow:hidden}
+.chip>.hd{padding:8px 12px;font-size:11.5px;font-weight:600;letter-spacing:.6px;
+  border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chip>.hd .spec{font-weight:400;font-size:10.5px;color:var(--tx3);letter-spacing:0;margin-left:auto;text-align:right}
+.chip>.bd{padding:12px}
+
+.chip.host{border-color:var(--host);background:var(--host-bg)}
+.chip.host>.hd{color:var(--host);background:var(--host-bg);border-bottom-color:var(--host)}
+.chip.dram{border-color:var(--dram);background:var(--dram-bg)}
+.chip.dram>.hd{color:var(--dram);background:var(--dram-bg);border-bottom-color:var(--dram)}
+.chip.fabric{border-color:var(--fabric);background:var(--fabric-bg)}
+.chip.fabric>.hd{color:var(--fabric);background:var(--fabric-bg);border-bottom-color:var(--fabric)}
+.chip.logic{border-color:var(--logic);background:var(--logic-bg)}
+.chip.logic>.hd{color:var(--logic);background:var(--logic-bg);border-bottom-color:var(--logic)}
+.chip.sram{border-color:var(--sram);background:var(--sram-bg)}
+.chip.sram>.hd{color:var(--sram);background:var(--sram-bg);border-bottom-color:var(--sram)}
+.chip.vram{border-color:var(--vram);background:var(--vram-bg)}
+.chip.vram>.hd{color:var(--vram);background:var(--vram-bg);border-bottom-color:var(--vram)}
+.chip.fixed{border-color:var(--fixed);background:var(--fixed-bg)}
+.chip.fixed>.hd{color:var(--fixed);background:var(--fixed-bg);border-bottom-color:var(--fixed)}
+.chip.sw{border-color:var(--sw);background:var(--sw-bg)}
+.chip.sw>.hd{color:var(--sw);background:var(--sw-bg);border-bottom-color:var(--sw)}
+.chip.dashed{border-style:dashed}
+
+/* small unit box */
+.u{border:1px solid var(--line2);border-radius:5px;background:var(--bg3);padding:6px 8px;font-size:10.5px;line-height:1.45}
+.u .n{color:var(--tx);font-weight:600;display:block}
+.u .d{color:var(--tx3);font-size:9.5px;display:block;margin-top:1px}
+.u.host{border-color:#4a9eff66;background:var(--host-bg)}   .u.host .n{color:var(--host)}
+.u.dram{border-color:#8b93a866;background:var(--dram-bg)}   .u.dram .n{color:var(--dram)}
+.u.fabric{border-color:#f0a84866;background:var(--fabric-bg)}.u.fabric .n{color:var(--fabric)}
+.u.logic{border-color:#3ecf8e66;background:var(--logic-bg)} .u.logic .n{color:var(--logic)}
+.u.sram{border-color:#b57bff66;background:var(--sram-bg)}   .u.sram .n{color:var(--sram)}
+.u.vram{border-color:#ff6b8a66;background:var(--vram-bg)}   .u.vram .n{color:var(--vram)}
+.u.fixed{border-color:#f6d36566;background:var(--fixed-bg)} .u.fixed .n{color:var(--fixed)}
+.u.sw{border-color:#5eead466;background:var(--sw-bg)}       .u.sw .n{color:var(--sw)}
+.u.na{border-color:#ff6b8a44;border-style:dashed;background:transparent} .u.na .n{color:var(--vram)}
+
+/* grids */
+.g{display:grid;gap:8px}
+.g2{grid-template-columns:repeat(2,1fr)} .g3{grid-template-columns:repeat(3,1fr)}
+.g4{grid-template-columns:repeat(4,1fr)} .g5{grid-template-columns:repeat(5,1fr)}
+.g6{grid-template-columns:repeat(6,1fr)} .g8{grid-template-columns:repeat(8,1fr)}
+.gauto{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.gauto-sm{grid-template-columns:repeat(auto-fit,minmax(112px,1fr))}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>*{flex:1 1 0;min-width:0}
+
+/* ── connectors ───────────────────────────────────── */
+.link{display:flex;flex-direction:column;align-items:center;margin:0;padding:0}
+.link .seg{width:0;border-left:2px solid var(--line2);height:9px}
+.link .lbl{border:1px solid var(--line2);border-radius:20px;background:var(--bg3);
+  padding:2.5px 11px;font-size:10px;color:var(--tx2);white-space:nowrap;max-width:100%}
+.link .lbl b{color:var(--tx);font-weight:600}
+.link.f .seg{border-color:var(--fabric)} .link.f .lbl{border-color:var(--fabric);color:var(--fabric)}
+.link.f .lbl b{color:var(--fabric)}
+.link.v .seg{border-color:var(--vram)} .link.v .lbl{border-color:var(--vram);color:var(--vram)}
+.link.v .lbl b{color:var(--vram)}
+.link.s .seg{border-color:var(--sram)} .link.s .lbl{border-color:var(--sram);color:var(--sram)}
+.link.s .lbl b{color:var(--sram)}
+.link.h .seg{border-color:var(--host)} .link.h .lbl{border-color:var(--host);color:var(--host)}
+.link.h .lbl b{color:var(--host)}
+.link.l .seg{border-color:var(--logic)} .link.l .lbl{border-color:var(--logic);color:var(--logic)}
+.link.l .lbl b{color:var(--logic)}
+
+/* horizontal bus bar (crossbar etc) */
+.bus{border:1px solid var(--line2);border-radius:5px;background:linear-gradient(90deg,var(--bg3),var(--bg2),var(--bg3));
+  padding:7px 12px;text-align:center;font-size:10.5px;color:var(--tx2);letter-spacing:.6px}
+.bus b{color:var(--tx);font-weight:600}
+.bus.v{border-color:var(--vram);color:var(--vram)} .bus.v b{color:var(--vram)}
+.bus.s{border-color:var(--sram);color:var(--sram)} .bus.s b{color:var(--sram)}
+.bus.l{border-color:var(--logic);color:var(--logic)} .bus.l b{color:var(--logic)}
+.bus.f{border-color:var(--fabric);color:var(--fabric)} .bus.f b{color:var(--fabric)}
+.fan{display:flex;justify-content:space-around;align-items:stretch}
+.fan span{width:0;border-left:2px solid var(--line2);height:10px}
+
+/* ── tables ───────────────────────────────────────── */
+table{width:100%;border-collapse:collapse;font-size:11px;margin:0 0 10px}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--tx3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.7px;
+  border-bottom:1px solid var(--line2);position:sticky;top:41px;background:var(--bg);z-index:5}
+td{color:var(--tx2)}
+td.k{color:var(--tx);font-weight:600;white-space:nowrap}
+tbody tr:hover{background:var(--bg2)}
+.num-col{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:7px;padding:2px 10px 0;background:var(--bg2)}
+
+/* ── misc ─────────────────────────────────────────── */
+.tag{display:inline-block;font-size:9px;padding:1px 5px;border-radius:3px;letter-spacing:.5px;
+  border:1px solid var(--line2);color:var(--tx3);vertical-align:middle;font-weight:600}
+.tag.probed{border-color:#3ecf8e66;color:var(--logic);background:var(--logic-bg)}
+.tag.spec{border-color:#4a9eff66;color:var(--host);background:var(--host-bg)}
+.tag.inf{border-color:#f0a84866;color:var(--fabric);background:var(--fabric-bg)}
+.tag.na{border-color:#ff6b8a66;color:var(--vram);background:var(--vram-bg)}
+
+.note{border-left:3px solid var(--fabric);background:var(--fabric-bg);padding:9px 13px;
+  font-size:11.5px;color:var(--tx2);margin:14px 0;border-radius:0 5px 5px 0}
+.note b{color:var(--fabric)}
+.note.na{border-left-color:var(--vram);background:var(--vram-bg)} .note.na b{color:var(--vram)}
+.note.ok{border-left-color:var(--logic);background:var(--logic-bg)} .note.ok b{color:var(--logic)}
+
+pre{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:11px 13px;
+  overflow-x:auto;font-size:10.5px;color:var(--tx2);line-height:1.55;margin:0 0 12px}
+pre b{color:var(--logic);font-weight:600}
+code{background:var(--bg3);border:1px solid var(--line);border-radius:3px;padding:.5px 4px;font-size:11px;color:var(--tx)}
+
+.legend{display:flex;flex-wrap:wrap;gap:7px;margin:0 0 26px}
+.legend .it{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:5px;
+  padding:4px 9px;font-size:10.5px;color:var(--tx2);background:var(--bg2)}
+.legend .sw-dot{width:9px;height:9px;border-radius:2px;flex:none}
+
+.kv{display:grid;grid-template-columns:auto 1fr;gap:2px 14px;font-size:11px}
+.kv dt{color:var(--tx3);white-space:nowrap}
+.kv dd{margin:0;color:var(--tx)}
+
+.stack{display:flex;flex-direction:column}
+ul{margin:0 0 12px;padding-left:20px;color:var(--tx2);font-size:12px}
+li{margin-bottom:4px}
+li b{color:var(--tx)}
+hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+.dim{color:var(--tx3)}
+.hl{color:var(--tx);font-weight:600}
+@media print{nav{position:static}th{position:static}body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <h1>Complete Machine Architecture — every component and connection</h1>
+  <div class="sub">
+    <b>Host:</b> AMD EPYC 7R13 (Zen 3 &ldquo;Milan&rdquo;) · 4c/8t vCPU · 30 GiB DDR4 · KVM guest &nbsp;→&nbsp;
+    <b>PCIe Gen4 &times;8</b> &nbsp;→&nbsp;
+    <b>Device:</b> NVIDIA L4 (AD104, Ada Lovelace, CC 8.9) · 58 SM · 48 MB L2 · 24 GB GDDR6
+  </div>
+  <div class="sub" style="margin-top:8px">
+    Every number below is either <span class="tag probed">PROBED</span> read off this machine,
+    <span class="tag spec">SPEC</span> from the published AD104/Zen&nbsp;3 datasheet,
+    <span class="tag inf">INFERRED</span> derived or hypervisor-hidden, or
+    <span class="tag na">ABSENT</span> not present on this hardware.
+    Raw probe output is in <a href="#s16">&sect;16</a>.
+  </div>
+</div></header>
+
+<nav><div class="inner">
+  <a href="#s1">1 · System</a>
+  <a href="#s2">2 · CPU die</a>
+  <a href="#s3">3 · Host DRAM</a>
+  <a href="#s4">4 · PCIe link</a>
+  <a href="#s5">5 · AD104 die</a>
+  <a href="#s6">6 · GPC</a>
+  <a href="#s7">7 · TPC</a>
+  <a href="#s8">8 · SM</a>
+  <a href="#s9">9 · Sub-partition</a>
+  <a href="#s10">10 · Memory spaces</a>
+  <a href="#s11">11 · Translation</a>
+  <a href="#s12">12 · Latency ladder</a>
+  <a href="#s13">13 · Clocks &amp; power</a>
+  <a href="#s14">14 · End-to-end trace</a>
+  <a href="#s15">15 · Absent</a>
+  <a href="#s16">16 · Probes</a>
+  <button id="toggleAll">collapse all</button>
+</div></nav>
+
+<div class="wrap">
+
+<div class="legend">
+  <div class="it"><span class="sw-dot" style="background:#4a9eff"></span>Host logic (CPU cores, root complex)</div>
+  <div class="it"><span class="sw-dot" style="background:#8b93a8"></span>Off-chip DRAM (DDR4)</div>
+  <div class="it"><span class="sw-dot" style="background:#f0a848"></span>Interconnect / fabric</div>
+  <div class="it"><span class="sw-dot" style="background:#3ecf8e"></span>GPU programmable logic</div>
+  <div class="it"><span class="sw-dot" style="background:#b57bff"></span>On-chip SRAM (regs, caches, SMEM)</div>
+  <div class="it"><span class="sw-dot" style="background:#ff6b8a"></span>Off-chip VRAM (GDDR6)</div>
+  <div class="it"><span class="sw-dot" style="background:#f6d365"></span>Fixed-function engines</div>
+  <div class="it"><span class="sw-dot" style="background:#5eead4"></span>Software / driver layer</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════ 1 -->
+<section id="s1">
+<h2><span class="num">§1</span> Whole-machine topology <span class="tog">−</span></h2>
+<div class="lede">Two silicon dies, two DRAM pools, one PCIe link between them. Everything else in this
+document is a zoom into one of these boxes. Note the asymmetry that governs all CUDA performance work:
+the GPU reaches its own DRAM at <b>300 GB/s</b> but reaches host DRAM at <b>~14 GB/s</b> — a 21× cliff.</div>
+<div class="body">
+
+<div class="row" style="align-items:stretch;gap:16px">
+
+  <!-- HOST SIDE -->
+  <div class="stack" style="flex:1 1 44%">
+    <div class="chip host">
+      <div class="hd">HOST PACKAGE — AMD EPYC 7R13 <span class="spec">Zen 3 · Socket SP3 · 7 nm CCD + 12 nm IOD</span></div>
+      <div class="bd">
+        <div class="g g4" style="margin-bottom:8px">
+          <div class="u host"><span class="n">Core 0</span><span class="d">2 threads (cpu0, cpu4)</span></div>
+          <div class="u host"><span class="n">Core 1</span><span class="d">2 threads (cpu1, cpu5)</span></div>
+          <div class="u host"><span class="n">Core 2</span><span class="d">2 threads (cpu2, cpu6)</span></div>
+          <div class="u host"><span class="n">Core 3</span><span class="d">2 threads (cpu3, cpu7)</span></div>
+        </div>
+        <div class="u sram" style="text-align:center"><span class="n">L1 / L2 private · L3 16 MiB shared</span><span class="d">detail in §2</span></div>
+      </div>
+    </div>
+    <div class="link h"><div class="seg"></div><div class="lbl">Infinity Fabric → UMC · <b>~205 GB/s</b> peak socket</div><div class="seg"></div></div>
+    <div class="chip dram">
+      <div class="hd">HOST DRAM <span class="spec">30 GiB usable · DDR4-3200 · no swap</span></div>
+      <div class="bd" style="font-size:10.5px;color:var(--tx3)">Pageable pages (migratable, not DMA-safe) + pinned pages (page-locked, DMA-addressable) — §3</div>
+    </div>
+  </div>
+
+  <!-- LINK -->
+  <div class="stack" style="flex:0 0 200px;justify-content:center">
+    <div class="chip fabric">
+      <div class="hd" style="justify-content:center">PCIe Gen4</div>
+      <div class="bd" style="text-align:center">
+        <div class="u fabric" style="margin-bottom:6px"><span class="n">×8 lanes</span><span class="d">negotiated (×16 capable)</span></div>
+        <div class="u fabric" style="margin-bottom:6px"><span class="n">15.75 GB/s</span><span class="d">theoretical each way</span></div>
+        <div class="u fabric"><span class="n">~13–14 GB/s</span><span class="d">achievable, pinned</span></div>
+        <div style="font-size:9.5px;color:var(--tx3);margin-top:8px;line-height:1.5">
+          16 GT/s/lane · 128b/130b<br>MaxPayload 128 B<br>MaxReadReq 512 B<br>~1–2 µs one-way latency
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEVICE SIDE -->
+  <div class="stack" style="flex:1 1 44%">
+    <div class="chip logic">
+      <div class="hd">DEVICE PACKAGE — NVIDIA L4 <span class="spec">AD104 · TSMC 4N · 35.8 B transistors · 294 mm²</span></div>
+      <div class="bd">
+        <div class="g g5" style="margin-bottom:8px">
+          <div class="u logic"><span class="n">GPC 0</span><span class="d">12 SM</span></div>
+          <div class="u logic"><span class="n">GPC 1</span><span class="d">12 SM</span></div>
+          <div class="u logic"><span class="n">GPC 2</span><span class="d">12 SM</span></div>
+          <div class="u logic"><span class="n">GPC 3</span><span class="d">12 SM</span></div>
+          <div class="u logic"><span class="n">GPC 4</span><span class="d">10 SM</span></div>
+        </div>
+        <div class="u sram" style="text-align:center"><span class="n">L2 cache — 48 MB unified</span><span class="d">detail in §5</span></div>
+      </div>
+    </div>
+    <div class="link v"><div class="seg"></div><div class="lbl">6 × 32-bit GDDR6 controllers · <b>300 GB/s</b></div><div class="seg"></div></div>
+    <div class="chip vram">
+      <div class="hd">DEVICE DRAM <span class="spec">24 GB GDDR6 · 22.04 GiB usable (ECC on)</span></div>
+      <div class="bd" style="font-size:10.5px;color:var(--tx3)">12 × 16 Gb devices in clamshell · 192-bit · 12.5 Gbps/pin — §5</div>
+    </div>
+  </div>
+</div>
+
+<h3>The other PCIe endpoints on this machine</h3>
+<p>The GPU is not alone on the root complex. From <code>lspci -tv</code>, the guest sees four separate host
+bridges — the GPU has its own, so GPU traffic does not contend with storage or network traffic at a
+shared switch:</p>
+<div class="g gauto">
+  <div class="u fabric"><span class="n">0000:30 → 31:00.0</span><span class="d">NVIDIA AD104GL [L4] — our device</span></div>
+  <div class="u fabric"><span class="n">0000:2c → 2f:00.0</span><span class="d">Amazon NVMe SSD controller (root volume)</span></div>
+  <div class="u fabric"><span class="n">0000:24 → 27,28:00.0</span><span class="d">2× Amazon ENA (Elastic Network Adapter)</span></div>
+  <div class="u fabric"><span class="n">0000:01 → 02–23</span><span class="d">large empty bridge fan-out (hot-plug slots)</span></div>
+</div>
+<div class="note"><b>Virtualisation caveat.</b> This is a KVM guest (<code>Hypervisor vendor: KVM</code>).
+The PCIe topology above is the <i>guest's</i> view: the GPU is passed through with device assignment, so the
+DMA path is real silicon, but bridge numbering is synthesised by the hypervisor and the physical slot
+wiring is invisible. The <span class="hl">×8 link width against a ×16-capable endpoint</span> is a property
+of the host slot, not of the L4 card.</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 2 -->
+<section id="s2">
+<h2><span class="num">§2</span> Host silicon — AMD EPYC 7R13, core to memory controller <span class="tog">−</span></h2>
+<div class="lede">Zen 3 is a chiplet design: compute cores live on CCDs, all I/O and memory controllers live
+on a separate central IOD. Every cache miss and every PCIe transaction crosses the Infinity Fabric between them.</div>
+<div class="body">
+
+<div class="stack">
+  <div class="chip host">
+    <div class="hd">CORE ×4 <span class="spec">Zen 3 · 2.65 GHz base / 3.5 GHz boost · SMT2 · 19 stage · 6-wide dispatch</span></div>
+    <div class="bd">
+      <h4 style="margin-top:0">Front end (per core)</h4>
+      <div class="g gauto-sm" style="margin-bottom:12px">
+        <div class="u host"><span class="n">Branch predictor</span><span class="d">TAGE, 2 pred/cycle</span></div>
+        <div class="u host"><span class="n">L1 BTB / L2 BTB</span><span class="d">1024 / 6656 entry</span></div>
+        <div class="u sram"><span class="n">L1i cache</span><span class="d">32 KB, 8-way, 64 B line</span></div>
+        <div class="u sram"><span class="n">Op cache</span><span class="d">4096 μop, 8 μop/cy</span></div>
+        <div class="u host"><span class="n">Decode</span><span class="d">4 x86 instr/cycle</span></div>
+        <div class="u sram"><span class="n">L1 iTLB</span><span class="d">64 entry</span></div>
+      </div>
+      <h4>Execution (per core)</h4>
+      <div class="g gauto-sm" style="margin-bottom:12px">
+        <div class="u host"><span class="n">4 × ALU</span><span class="d">integer</span></div>
+        <div class="u host"><span class="n">3 × AGU</span><span class="d">address gen</span></div>
+        <div class="u host"><span class="n">2 × FMA 256-bit</span><span class="d">AVX2, no AVX-512</span></div>
+        <div class="u host"><span class="n">2 × FADD</span><span class="d">vector add</span></div>
+        <div class="u host"><span class="n">Reorder buffer</span><span class="d">256 entry</span></div>
+        <div class="u host"><span class="n">Int / FP reg file</span><span class="d">192 / 160 entry</span></div>
+        <div class="u host"><span class="n">Load / store queue</span><span class="d">72 ld + 64 st</span></div>
+        <div class="u fixed"><span class="n">AES-NI · SHA-NI</span><span class="d">crypto fixed-function</span></div>
+      </div>
+      <h4>Private cache (per core) <span class="tag probed">PROBED</span></h4>
+      <div class="g g4">
+        <div class="u sram"><span class="n">L1d — 32 KB</span><span class="d">8-way · 64 sets · 64 B line · ~4 cy · write-back</span></div>
+        <div class="u sram"><span class="n">L1i — 32 KB</span><span class="d">8-way · 64 sets · 64 B line</span></div>
+        <div class="u sram"><span class="n">L2 — 512 KB</span><span class="d">8-way · 1024 sets · ~13 cy · inclusive of L1</span></div>
+        <div class="u sram"><span class="n">L1d TLB / L2 TLB</span><span class="d">64 / 2048 entry · 4 K, 2 M, 1 G pages</span></div>
+      </div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:8px">
+        <code>shared_cpu_list</code> confirms L1/L2 are shared only by the two SMT siblings of one core
+        (e.g. index0 → <code>0,4</code>): 4 physical cores presented as 8 logical CPUs.
+      </div>
+    </div>
+  </div>
+
+  <div class="link h"><div class="seg"></div><div class="lbl">L2 victim fill / snoop — core ↔ CCX L3</div><div class="seg"></div></div>
+
+  <div class="chip sram">
+    <div class="hd">L3 CACHE — 16 MiB visible to this guest <span class="spec">16-way · 32768 sets · 64 B line · ~46 cy · victim cache, non-inclusive</span></div>
+    <div class="bd">
+      <div class="g g2">
+        <div class="u sram"><span class="n">Shared by cpu0–cpu7</span><span class="d"><code>shared_cpu_list = 0-7</code> — one L3 domain, one NUMA node</span></div>
+        <div class="u dram"><span class="n">Host reality <span class="tag inf">INFERRED</span></span><span class="d">Zen 3 unifies 32 MB L3 across an 8-core CCX. This guest gets 4 of those cores and a 16 MiB proportional view; the other half is another tenant's.</span></div>
+      </div>
+      <div class="note" style="margin-bottom:0"><b>Why this matters for CUDA.</b> Staging buffers you memcpy from
+      should fit in 16 MiB if you want the copy to be L3-resident. Beyond that the DMA read pulls from DDR4
+      and the copy engine sees full memory latency on every 128 B payload.</div>
+    </div>
+  </div>
+
+  <div class="link h"><div class="seg"></div><div class="lbl">GMI3 / Infinity Fabric link · CCD → IOD</div><div class="seg"></div></div>
+
+  <div class="chip fabric">
+    <div class="hd">IOD — central I/O die <span class="spec">everything below is on the IOD, not the core chiplet</span></div>
+    <div class="bd">
+      <div class="g gauto">
+        <div class="u fabric"><span class="n">Infinity Fabric switch</span><span class="d">coherent interconnect; all CCD, UMC and PCIe traffic meets here</span></div>
+        <div class="u fabric"><span class="n">8 × UMC</span><span class="d">Unified Memory Controllers, one per DDR4 channel <span class="tag inf">INF</span></span></div>
+        <div class="u fabric"><span class="n">PCIe root complex</span><span class="d">128 Gen4 lanes on the socket; our GPU takes 8 <span class="tag probed">PROBED</span></span></div>
+        <div class="u fabric"><span class="n">AMD IOMMU</span><span class="d">device DMA address translation + isolation — see §11</span></div>
+        <div class="u fabric"><span class="n">Coherent Slave / probe filter</span><span class="d">tracks which cache holds each line; source of PCIe snoop cost</span></div>
+        <div class="u fixed"><span class="n">Nitro offload <span class="tag inf">INF</span></span><span class="d">AWS moves NIC/NVMe virtualisation off-CPU; why ENA/NVMe appear as native endpoints</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Host cache/memory numbers as measured</h3>
+<div class="scroll"><table>
+<thead><tr><th>Level</th><th>Size</th><th>Assoc</th><th>Sets</th><th>Line</th><th>Shared by</th><th>Latency <span class="tag spec">SPEC</span></th><th>Source</th></tr></thead>
+<tbody>
+<tr><td class="k">L1d</td><td class="num-col">32 KiB</td><td class="num-col">8</td><td class="num-col">64</td><td class="num-col">64 B</td><td>1 core (2 threads)</td><td class="num-col">~4 cy</td><td><code>index0</code></td></tr>
+<tr><td class="k">L1i</td><td class="num-col">32 KiB</td><td class="num-col">8</td><td class="num-col">64</td><td class="num-col">64 B</td><td>1 core (2 threads)</td><td class="num-col">~4 cy</td><td><code>index1</code></td></tr>
+<tr><td class="k">L2</td><td class="num-col">512 KiB</td><td class="num-col">8</td><td class="num-col">1024</td><td class="num-col">64 B</td><td>1 core (2 threads)</td><td class="num-col">~13 cy</td><td><code>index2</code></td></tr>
+<tr><td class="k">L3</td><td class="num-col">16 MiB</td><td class="num-col">16</td><td class="num-col">32768</td><td class="num-col">64 B</td><td>all 8 logical CPUs</td><td class="num-col">~46 cy</td><td><code>index3</code></td></tr>
+<tr><td class="k">DDR4</td><td class="num-col">30 GiB</td><td>—</td><td>—</td><td class="num-col">64 B</td><td>whole guest, 1 NUMA node</td><td class="num-col">~85–110 ns</td><td><code>free -h</code></td></tr>
+</tbody></table></div>
+<p class="dim" style="font-size:11px">Totals reported by <code>lscpu</code> (L1d 128 KiB / 4 instances, L2 2 MiB / 4 instances,
+L3 16 MiB / 1 instance) are just these per-core figures × 4 physical cores.</p>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 3 -->
+<section id="s3">
+<h2><span class="num">§3</span> Host DRAM subsystem, and the three kinds of host memory CUDA sees <span class="tog">−</span></h2>
+<div class="lede">Physically it is one pool of DDR4. Functionally CUDA distinguishes three states, and the
+distinction is entirely about whether the page can be safely DMA-targeted by the GPU.</div>
+<div class="body">
+
+<div class="chip dram">
+  <div class="hd">DDR4 SUBSYSTEM <span class="spec">31,621,964 kB total · 4 KiB base page · THP = madvise</span></div>
+  <div class="bd">
+    <div class="g gauto" style="margin-bottom:10px">
+      <div class="u dram"><span class="n">DIMM organisation</span><span class="d">Not observable from the guest — no SMBIOS/DMI access. On a full Milan socket: 8 channels × DDR4-3200, 2 DIMM/ch. <span class="tag inf">INFERRED</span></span></div>
+      <div class="u dram"><span class="n">Rank / bank / row</span><span class="d">DDR4: 16 banks in 4 bank groups per rank; ~8 KB row (page). Row-buffer hit ≈ 1/3 the latency of a row miss.</span></div>
+      <div class="u dram"><span class="n">Page sizes available</span><span class="d">4 KiB base <span class="tag probed">PROBED</span>, 2 MiB THP (madvise mode), 1 GiB hugepages if reserved</span></div>
+      <div class="u dram"><span class="n">Swap</span><span class="d">0 B — no page-out path; pinning cannot fail against swap pressure, but OOM is hard</span></div>
+    </div>
+    <div class="g g3">
+      <div class="u dram"><span class="n">Total</span><span class="d">30 GiB / 31.6 M kB</span></div>
+      <div class="u dram"><span class="n">Free at probe</span><span class="d">21 GiB free, 26 GiB available</span></div>
+      <div class="u dram"><span class="n">Page cache</span><span class="d">5.6 GiB buff/cache</span></div>
+    </div>
+  </div>
+</div>
+
+<h3>The three host memory states</h3>
+<div class="row" style="align-items:stretch">
+  <div class="chip dram" style="flex:1">
+    <div class="hd">1 · PAGEABLE <span class="spec">malloc / new</span></div>
+    <div class="bd" style="font-size:11px;color:var(--tx2)">
+      Ordinary virtual memory. The kernel may relocate or reclaim the physical page at any time, so the GPU's
+      DMA engine <b>cannot</b> be pointed at it.
+      <div class="link" style="margin:10px 0"><div class="seg"></div><div class="lbl">what actually happens</div><div class="seg"></div></div>
+      <code>cudaMemcpy</code> from pageable memory <span class="hl">stages through a driver-owned pinned
+      bounce buffer</span>: CPU copies into the staging buffer, then the DMA engine copies out. Two passes over
+      the data, and the copy is synchronous-ish. Typically caps out near <span class="hl">~6–9 GB/s</span>
+      on this link — well under the ~13–14 GB/s the link can do.
+    </div>
+  </div>
+  <div class="chip fabric" style="flex:1">
+    <div class="hd">2 · PINNED / PAGE-LOCKED <span class="spec">cudaHostAlloc, cudaMallocHost</span></div>
+    <div class="bd" style="font-size:11px;color:var(--tx2)">
+      Page-locked, so the physical address is stable and registered with the IOMMU. The GPU copy engine
+      DMAs <b>directly</b>, no bounce buffer, and the transfer is genuinely asynchronous — it can overlap
+      with kernel execution on a different stream.
+      <div class="link f" style="margin:10px 0"><div class="seg"></div><div class="lbl">the only way to saturate the link</div><div class="seg"></div></div>
+      Reaches <span class="hl">~13–14 GB/s</span>. Cost: pinned pages are unavailable to the rest of the
+      system, so over-pinning starves the page cache.
+      <code>hostRegisterSupported = 1</code> <span class="tag probed">PROBED</span> — existing allocations can
+      be pinned in place with <code>cudaHostRegister</code>.
+    </div>
+  </div>
+  <div class="chip sw" style="flex:1">
+    <div class="hd">3 · MANAGED / UNIFIED <span class="spec">cudaMallocManaged</span></div>
+    <div class="bd" style="font-size:11px;color:var(--tx2)">
+      One virtual address valid on both sides. <code>unifiedAddressing = 1</code>, <code>managedMemory = 1</code>,
+      <code>concurrentManagedAccess = 1</code> <span class="tag probed">PROBED</span>.
+      <div class="link" style="margin:10px 0"><div class="seg"></div><div class="lbl">migration, not coherence</div><div class="seg"></div></div>
+      On this machine <code>pageableMemoryAccessUsesHostPageTables = 0</code> and
+      <code>hostNativeAtomicSupported = 0</code>. There is <span class="hl">no cache-coherent CPU↔GPU
+      link</span> here. Unified memory is implemented by <b>GPU page faulting + page migration over PCIe</b>,
+      driven by the UVM kernel module. A fault-and-migrate round trip costs microseconds, so a
+      pointer-chasing kernel over managed memory can be orders of magnitude slower than the same data
+      prefetched with <code>cudaMemPrefetchAsync</code>.
+    </div>
+  </div>
+</div>
+
+<div class="note ok"><b>Practical rule this hardware enforces.</b> Pinned + async + streams is not a
+micro-optimisation on this box, it is the difference between 6 GB/s and 14 GB/s — and with 2 copy engines
+(<code>asyncEngineCount = 2</code>) you can have an H2D copy, a kernel, and a D2H copy all in flight at once.</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 4 -->
+<section id="s4">
+<h2><span class="num">§4</span> The PCIe link — lanes, BARs, doorbells, and how work actually reaches the GPU <span class="tog">−</span></h2>
+<div class="lede">This is the part most diagrams draw as a single arrow. It is really a packet-switched
+network, three memory-mapped apertures, and a ring buffer.</div>
+<div class="body">
+
+<h3>Physical &amp; link layer <span class="tag probed">PROBED</span></h3>
+<div class="g gauto">
+  <div class="u fabric"><span class="n">LnkCap</span><span class="d">Speed 16 GT/s, Width ×16, ASPM not supported</span></div>
+  <div class="u fabric"><span class="n">LnkSta</span><span class="d">Speed 16 GT/s (ok), <b>Width ×8 (downgraded)</b></span></div>
+  <div class="u fabric"><span class="n">Encoding</span><span class="d">128b/130b + FEC-less Gen4 → 1.969 GB/s per lane</span></div>
+  <div class="u fabric"><span class="n">Aggregate</span><span class="d">8 × 1.969 = <b>15.75 GB/s</b> each direction, full duplex</span></div>
+  <div class="u fabric"><span class="n">MaxPayload</span><span class="d">128 B negotiated (device capable of 256 B)</span></div>
+  <div class="u fabric"><span class="n">MaxReadReq</span><span class="d">512 B</span></div>
+  <div class="u fabric"><span class="n">Retimers</span><span class="d">2 retimers present in the path (LnkCap2)</span></div>
+  <div class="u fabric"><span class="n">Equalisation</span><span class="d">Complete, phase 1 done, −3.5 dB de-emphasis</span></div>
+</div>
+<div class="note"><b>The 128 B payload is a real tax.</b> Each TLP carries a 12–16 B header for 128 B of data
+→ ~11% protocol overhead floor, before ACK/NAK and flow-control credits. That is why measured
+pinned-memory bandwidth lands near 13–14 GB/s rather than 15.75. Had the platform negotiated
+256 B payload the overhead would roughly halve.</div>
+
+<h3>The three BAR apertures — how the CPU touches the GPU <span class="tag probed">PROBED</span></h3>
+<div class="scroll"><table>
+<thead><tr><th>Region</th><th>Physical address</th><th>Size</th><th>Type</th><th>What it is</th></tr></thead>
+<tbody>
+<tr><td class="k">BAR0</td><td><code>0xcd000000</code></td><td class="num-col">16 MB</td><td>32-bit, non-prefetchable</td><td><b>Register aperture.</b> Every GPU control register — engine start/stop, MMU config, doorbells, interrupt status. The driver's MMIO window. Non-prefetchable because reads have side effects.</td></tr>
+<tr><td class="k">BAR1</td><td><code>0x20800000000</code></td><td class="num-col">32 GB</td><td>64-bit, prefetchable</td><td><b>Framebuffer aperture.</b> Maps device VRAM into host physical address space so the CPU can load/store VRAM directly. 32 GB &gt; 24 GB of VRAM, so <span class="hl">all of VRAM is CPU-addressable at once</span> — no aperture windowing. This is what makes <code>cudaHostRegister</code>-free zero-copy and BAR1 peer access work.</td></tr>
+<tr><td class="k">BAR3</td><td><code>0x20032000000</code></td><td class="num-col">32 MB</td><td>64-bit, prefetchable</td><td><b>Instance memory (IFB) aperture.</b> Small window the driver uses for GPU instance/context structures — channel state, page directory roots, engine contexts.</td></tr>
+</tbody></table></div>
+<p class="dim" style="font-size:11px">Confirmed reserved by <code>Kernel driver in use: nvidia</code> —
+the open kernel module, NVRM 595.71.05.</p>
+
+<h3>Command submission path — how a kernel launch crosses the link</h3>
+<div class="stack">
+  <div class="chip sw"><div class="hd">HOST SOFTWARE</div><div class="bd">
+    <div class="g g4">
+      <div class="u sw"><span class="n">Your process</span><span class="d">kernel&lt;&lt;&lt;g,b&gt;&gt;&gt;() → cudaLaunchKernel</span></div>
+      <div class="u sw"><span class="n">CUDA runtime</span><span class="d">libcudart — stream/event bookkeeping</span></div>
+      <div class="u sw"><span class="n">CUDA driver</span><span class="d">libcuda — encodes launch into GPU commands (methods)</span></div>
+      <div class="u sw"><span class="n">nvidia.ko / nvidia-uvm.ko</span><span class="d">NVRM 595.71.05 — channel alloc, page tables, doorbell ring</span></div>
+    </div>
+  </div></div>
+  <div class="link l"><div class="seg"></div><div class="lbl">writes commands into a <b>pushbuffer</b> (ring buffer) in pinned host memory or VRAM</div><div class="seg"></div></div>
+  <div class="chip fabric"><div class="hd">SUBMISSION STRUCTURES</div><div class="bd">
+    <div class="g g4">
+      <div class="u fabric"><span class="n">Channel</span><span class="d">one hardware work queue; a CUDA stream maps onto one</span></div>
+      <div class="u fabric"><span class="n">GPFIFO</span><span class="d">ring of pointers to pushbuffer segments</span></div>
+      <div class="u fabric"><span class="n">Doorbell register</span><span class="d">a single MMIO write into BAR0 — &ldquo;new work, go look&rdquo;</span></div>
+      <div class="u fabric"><span class="n">Runlist / TSG</span><span class="d">timeslice group; the scheduler's list of runnable channels</span></div>
+    </div>
+  </div></div>
+  <div class="link f"><div class="seg"></div><div class="lbl">1 × 4-byte MMIO write (doorbell) — <b>the only thing the CPU pushes</b></div><div class="seg"></div></div>
+  <div class="chip logic"><div class="hd">GPU FRONT END</div><div class="bd">
+    <div class="g g4">
+      <div class="u logic"><span class="n">Host Interface / PBDMA</span><span class="d">DMA-<i>pulls</i> the pushbuffer contents across PCIe</span></div>
+      <div class="u logic"><span class="n">Front End (FE)</span><span class="d">decodes methods, sequences engine state</span></div>
+      <div class="u logic"><span class="n">GigaThread Engine</span><span class="d">context switch, channel scheduling, preemption</span></div>
+      <div class="u logic"><span class="n">Compute Work Distributor</span><span class="d">breaks the grid into blocks, assigns to SMs</span></div>
+    </div>
+  </div></div>
+</div>
+<div class="note"><b>The asymmetry to internalise:</b> the CPU never <i>pushes</i> your kernel across PCIe. It
+writes commands into a buffer and rings a doorbell; the GPU then <i>pulls</i>. This is why launch latency
+(~3–10 µs) is dominated by round trips and doorbell/fence ordering, not by bandwidth — and why launching
+thousands of tiny kernels is fatal while launching one big kernel is free.</div>
+
+<h3>Interrupts and completion signalling</h3>
+<div class="g gauto">
+  <div class="u fabric"><span class="n">MSI-X</span><span class="d">GPU raises a message-signalled interrupt (a memory write, not a pin) on fence/error</span></div>
+  <div class="u fabric"><span class="n">Semaphores / fences</span><span class="d">GPU writes a 32/64-bit value to a known address; host polls or waits on interrupt</span></div>
+  <div class="u sw"><span class="n">cudaStreamSynchronize</span><span class="d">spin-poll on a fence in pinned memory (fast) or block on interrupt (low CPU)</span></div>
+  <div class="u fabric"><span class="n">GPU → host DMA writes</span><span class="d">must be IOMMU-translated (§11) and land coherently in DDR4 — the probe filter in the IOD invalidates stale CPU cache lines</span></div>
+</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 5 -->
+<section id="s5">
+<h2><span class="num">§5</span> AD104 die floorplan — everything on the GPU chip <span class="tog">−</span></h2>
+<div class="lede">Top to bottom: work arrives at the host interface, is distributed to 5 GPCs, all of which
+reach a shared 48 MB L2 through a crossbar, which fronts 6 memory controllers driving 12 GDDR6 packages.
+Beside that main path sit the copy engines, the video engines, and the MMU.</div>
+<div class="body">
+
+<div class="stack">
+
+  <div class="chip fabric">
+    <div class="hd">HOST INTERFACE <span class="spec">PCIe 4.0 controller · BAR0/1/3 decode · PBDMA</span></div>
+  </div>
+  <div class="link"><div class="seg"></div><div class="lbl">command stream + register access</div><div class="seg"></div></div>
+
+  <div class="chip logic">
+    <div class="hd">GIGATHREAD ENGINE <span class="spec">global scheduler &amp; work distributor</span></div>
+    <div class="bd"><div class="g gauto">
+      <div class="u logic"><span class="n">Compute Work Distributor (CWD)</span><span class="d">assigns thread blocks to SMs as resources free up; the reason block scheduling order is <b>not</b> guaranteed</span></div>
+      <div class="u logic"><span class="n">Context switch engine</span><span class="d">saves/restores full SM state; supports instruction-level preemption (Pascal+)</span></div>
+      <div class="u logic"><span class="n">MPS / time-slice arbiter</span><span class="d">multi-process service; <code>concurrentKernels = 1</code> <span class="tag probed">PROBED</span></span></div>
+      <div class="u logic"><span class="n">Grid launch queues</span><span class="d">up to 128 concurrent grids in flight per context</span></div>
+      <div class="u na" style="opacity:.55"><span class="n">Cluster / DSMEM distributor</span><span class="d"><span class="tag na">ABSENT</span> <code>clusterLaunch = 0</code> — no thread-block clusters on Ada</span></div>
+    </div></div>
+  </div>
+  <div class="link l"><div class="seg"></div><div class="lbl">block dispatch → <b>58 SMs</b> across 5 GPCs</div><div class="seg"></div></div>
+
+  <div class="chip logic">
+    <div class="hd">GRAPHICS PROCESSING CLUSTERS <span class="spec">5 GPCs · 29 of 30 TPCs enabled · 58 of 60 SMs enabled <span class="tag probed">PROBED: multiProcessorCount = 58</span></span></div>
+    <div class="bd">
+      <div class="g g5">
+        <div class="u logic"><span class="n">GPC 0</span><span class="d">6 TPC → 12 SM<br>1 Raster Engine<br>16 ROP</span></div>
+        <div class="u logic"><span class="n">GPC 1</span><span class="d">6 TPC → 12 SM<br>1 Raster Engine<br>16 ROP</span></div>
+        <div class="u logic"><span class="n">GPC 2</span><span class="d">6 TPC → 12 SM<br>1 Raster Engine<br>16 ROP</span></div>
+        <div class="u logic"><span class="n">GPC 3</span><span class="d">6 TPC → 12 SM<br>1 Raster Engine<br>16 ROP</span></div>
+        <div class="u logic" style="border-style:dashed"><span class="n">GPC 4</span><span class="d">5 TPC → 10 SM<br>1 Raster Engine<br>16 ROP<br><b>1 TPC fused off</b></span></div>
+      </div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:8px">
+        Full AD104 is 5 GPC × 6 TPC × 2 SM = 60 SM. The L4 bin disables one TPC (2 SM) → 58 SM = 7424 FP32 lanes.
+        Which GPC hosts the fused TPC is a per-die yield artifact and not exposed to software. <span class="tag inf">INFERRED</span>
+      </div>
+    </div>
+  </div>
+  <div class="link s"><div class="seg"></div><div class="lbl">all GPC memory traffic funnels into the crossbar</div><div class="seg"></div></div>
+
+  <div class="bus s" style="margin:0 0 4px"><b>CROSSBAR (XBAR)</b> — full interconnect: any SM ↔ any L2 slice. Also the path for SM↔SM traffic via L2, and for copy-engine and video-engine memory access.</div>
+  <div class="fan"><span></span><span></span><span></span><span></span><span></span><span></span></div>
+
+  <div class="chip sram">
+    <div class="hd">L2 CACHE — 48 MB unified <span class="spec">50,331,648 bytes <span class="tag probed">PROBED</span> · 6 partitions × 8 MB · physically indexed · write-back</span></div>
+    <div class="bd">
+      <div class="g g6" style="margin-bottom:10px">
+        <div class="u sram"><span class="n">L2 part. 0</span><span class="d">8 MB</span></div>
+        <div class="u sram"><span class="n">L2 part. 1</span><span class="d">8 MB</span></div>
+        <div class="u sram"><span class="n">L2 part. 2</span><span class="d">8 MB</span></div>
+        <div class="u sram"><span class="n">L2 part. 3</span><span class="d">8 MB</span></div>
+        <div class="u sram"><span class="n">L2 part. 4</span><span class="d">8 MB</span></div>
+        <div class="u sram"><span class="n">L2 part. 5</span><span class="d">8 MB</span></div>
+      </div>
+      <div class="g gauto">
+        <div class="u sram"><span class="n">Sector granularity</span><span class="d">32 B sectors, 128 B lines — the unit that coalescing efficiency is measured in</span></div>
+        <div class="u sram"><span class="n">Atomic unit</span><span class="d">Global atomics execute <b>at the L2 slice</b>, not in the SM. Same-address contention serialises here.</span></div>
+        <div class="u sram"><span class="n">Persisting L2 window</span><span class="d">up to 33,554,432 B (32 MiB) pinnable; access-policy window 128 MiB <span class="tag probed">PROBED</span></span></div>
+        <div class="u sram"><span class="n">Memory compression</span><span class="d">lossless colour/depth compression in the L2↔DRAM path (graphics-oriented, transparent)</span></div>
+        <div class="u sram"><span class="n">Instruction backing</span><span class="d">L2 also backs the SM instruction caches — cold code costs L2/DRAM latency</span></div>
+        <div class="u sram"><span class="n">Slice sub-division</span><span class="d">Each partition further splits into slices; NVIDIA does not publish AD104's slice count. <span class="tag inf">INFERRED</span></span></div>
+      </div>
+      <div class="note ok" style="margin-bottom:0"><b>Ada's headline change.</b> Ampere's GA104 had 4 MB of L2;
+      AD104 has 48 MB — <b>12×</b>. On this GPU an entire working set of a few tens of MB can live on-chip,
+      which is why L4 achieves respectable throughput on only 300 GB/s of DRAM bandwidth. Tiling for L2
+      residency (≤48 MB, realistically ≤32 MB with the persisting window) pays more here than on any
+      pre-Ada part.</div>
+    </div>
+  </div>
+  <div class="link v"><div class="seg"></div><div class="lbl">6 × 32-bit memory controllers · <b>192-bit</b> total</div><div class="seg"></div></div>
+
+  <div class="chip vram">
+    <div class="hd">GDDR6 MEMORY SUBSYSTEM <span class="spec">24 GB raw · 22.04 GiB usable · 12.5 Gbps/pin · <b>300.1 GB/s</b></span></div>
+    <div class="bd">
+      <div class="g g6" style="margin-bottom:10px">
+        <div class="u vram"><span class="n">MC 0</span><span class="d">32-bit<br>2 × 16 Gb</span></div>
+        <div class="u vram"><span class="n">MC 1</span><span class="d">32-bit<br>2 × 16 Gb</span></div>
+        <div class="u vram"><span class="n">MC 2</span><span class="d">32-bit<br>2 × 16 Gb</span></div>
+        <div class="u vram"><span class="n">MC 3</span><span class="d">32-bit<br>2 × 16 Gb</span></div>
+        <div class="u vram"><span class="n">MC 4</span><span class="d">32-bit<br>2 × 16 Gb</span></div>
+        <div class="u vram"><span class="n">MC 5</span><span class="d">32-bit<br>2 × 16 Gb</span></div>
+      </div>
+      <div class="g gauto">
+        <div class="u vram"><span class="n">Bus width</span><span class="d">192 bits = 24 B/clk <span class="tag probed">PROBED: memoryBusWidth = 192</span></span></div>
+        <div class="u vram"><span class="n">Clock</span><span class="d">6251 MHz I/O clock <span class="tag probed">PROBED</span> → 12.502 Gbps/pin data rate (DDR)</span></div>
+        <div class="u vram"><span class="n">Peak bandwidth</span><span class="d">12.502 GT/s × 24 B = <b>300.1 GB/s</b></span></div>
+        <div class="u vram"><span class="n">Package count</span><span class="d">192 ÷ 32 = 6 channels, but 24 GB needs 12 × 16 Gb devices → <b>clamshell mode</b>: 2 packages per 32-bit channel, each in ×16. This is what lets a single-slot 72 W card carry 24 GB. <span class="tag inf">INFERRED</span></span></div>
+        <div class="u vram"><span class="n">ECC</span><span class="d"><b>Enabled</b> <span class="tag probed">PROBED</span>. GDDR6 inline ECC consumes capacity: 24 GB raw → 23,661,248,512 B (22.04 GiB) reported to CUDA, and costs a few % of bandwidth.</span></div>
+        <div class="u vram"><span class="n">Internal organisation</span><span class="d">Each GDDR6 device: 2 independent 16-bit channels, 16 banks in 4 bank groups per channel. Row (page) ~2 KB. Bank-group interleaving is why strided access patterns at certain powers of two collapse.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Everything else on the die (beside the compute path)</h3>
+<div class="g gauto">
+  <div class="u fixed"><span class="n">2 × Copy Engine (CE)</span><span class="d"><code>asyncEngineCount = 2</code> <span class="tag probed">PROBED</span>. Independent DMA engines: one H2D + one D2H concurrently with kernels. This is what makes 3-way overlap possible.</span></div>
+  <div class="u fixed"><span class="n">GPU MMU (GMMU)</span><span class="d">Page-table walker + hub TLB. Page tables live in VRAM. 4 KB / 64 KB / 2 MB pages. See §11.</span></div>
+  <div class="u fixed"><span class="n">2 × NVENC (7th gen)</span><span class="d">H.264, HEVC, <b>AV1</b> encode. Fully independent of the SMs — encoding does not steal FP32 throughput. <span class="tag spec">SPEC</span></span></div>
+  <div class="u fixed"><span class="n">4 × NVDEC (5th gen)</span><span class="d">H.264/HEVC/VP9/AV1 decode. L4's reason for existing in video pipelines. <span class="tag spec">SPEC</span></span></div>
+  <div class="u fixed"><span class="n">4 × NVJPEG decoder</span><span class="d">Hardware JPEG decode — the DALI / nvJPEG fast path. <span class="tag spec">SPEC</span></span></div>
+  <div class="u fixed"><span class="n">Optical Flow Accelerator</span><span class="d">1 OFA engine — motion vector estimation for frame interpolation / video analytics. <span class="tag spec">SPEC</span></span></div>
+  <div class="u fixed"><span class="n">80 × ROP</span><span class="d">Raster Operations: blend, MSAA resolve, depth/stencil test, framebuffer compression. 16 per GPC. Unused by pure CUDA workloads.</span></div>
+  <div class="u fixed"><span class="n">Display engine</span><span class="d">AD104 has one, but the L4 board exposes <b>no display connectors</b> — headless by design. <span class="tag na">NO OUTPUTS</span></span></div>
+  <div class="u fixed"><span class="n">GSP (GPU System Processor)</span><span class="d">RISC-V microcontroller running the offloaded driver firmware. On the open kernel module most of what used to be host-side driver logic runs here.</span></div>
+  <div class="u fixed"><span class="n">Falcon microcontrollers</span><span class="d">Several small cores for power management, secure boot, engine sequencing, video engine control.</span></div>
+  <div class="u fixed"><span class="n">PMU / power management</span><span class="d">Per-domain clock gating and DVFS to hold the 72 W board envelope. Drives the clock behaviour in §13.</span></div>
+  <div class="u fixed"><span class="n">Fuse / config block</span><span class="d">Holds the SM/TPC disable mask, memory config, device ID — how one AD104 die becomes an L4 vs an RTX 4070.</span></div>
+</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 6 -->
+<section id="s6">
+<h2><span class="num">§6</span> Inside one GPC <span class="tog">−</span></h2>
+<div class="lede">A GPC is the largest self-contained unit that has its own rasteriser. For CUDA it matters
+mainly as the level at which SMs share an address-translation cache and an L2 crossbar port.</div>
+<div class="body">
+<div class="chip logic">
+  <div class="hd">GRAPHICS PROCESSING CLUSTER (×5) <span class="spec">12 SM · 16 ROP · 1 Raster Engine</span></div>
+  <div class="bd">
+    <div class="g gauto" style="margin-bottom:12px">
+      <div class="u logic"><span class="n">Raster Engine</span><span class="d">Edge setup, triangle rasterisation, Z-cull, hierarchical-Z. Graphics only — idle under CUDA.</span></div>
+      <div class="u fixed"><span class="n">2 × ROP partition</span><span class="d">8 ROPs each = 16 per GPC, 80 on the die</span></div>
+      <div class="u sram"><span class="n">GPC-level MMU + TLB</span><span class="d">Second-level translation cache behind the per-SM µTLBs; misses go to the hub MMU. §11</span></div>
+      <div class="u logic"><span class="n">Work distribution crossbar port</span><span class="d">GPC's connection to the GigaThread engine (in) and XBAR (out)</span></div>
+    </div>
+    <h4>6 Texture Processing Clusters</h4>
+    <div class="g g6">
+      <div class="u logic"><span class="n">TPC 0</span><span class="d">SM 0 · SM 1</span></div>
+      <div class="u logic"><span class="n">TPC 1</span><span class="d">SM 2 · SM 3</span></div>
+      <div class="u logic"><span class="n">TPC 2</span><span class="d">SM 4 · SM 5</span></div>
+      <div class="u logic"><span class="n">TPC 3</span><span class="d">SM 6 · SM 7</span></div>
+      <div class="u logic"><span class="n">TPC 4</span><span class="d">SM 8 · SM 9</span></div>
+      <div class="u logic"><span class="n">TPC 5</span><span class="d">SM 10 · SM 11</span></div>
+    </div>
+  </div>
+</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 7 -->
+<section id="s7">
+<h2><span class="num">§7</span> Inside one TPC <span class="tog">−</span></h2>
+<div class="lede">Two SMs plus the small amount of logic they share. This is the granularity at which the L4
+bin fuses off silicon — 58 SMs means one whole TPC is dark.</div>
+<div class="body">
+<div class="chip logic">
+  <div class="hd">TEXTURE PROCESSING CLUSTER (×29 enabled, ×30 physical)</div>
+  <div class="bd">
+    <div class="row">
+      <div class="chip logic" style="flex:1"><div class="hd">SM (even)</div><div class="bd" style="font-size:10.5px;color:var(--tx3)">full detail in §8</div></div>
+      <div class="chip logic" style="flex:1"><div class="hd">SM (odd)</div><div class="bd" style="font-size:10.5px;color:var(--tx3)">full detail in §8</div></div>
+    </div>
+    <div class="link l" style="margin-top:8px"><div class="seg"></div><div class="lbl">shared TPC-level resources</div><div class="seg"></div></div>
+    <div class="g g3">
+      <div class="u logic"><span class="n">PolyMorph Engine</span><span class="d">Vertex fetch, tessellation, viewport transform, attribute setup, stream output. Graphics only.</span></div>
+      <div class="u logic"><span class="n">TPC work arbiter</span><span class="d">Distributes incoming blocks / warps between the two SMs</span></div>
+      <div class="u sram"><span class="n">Shared instruction path to L2</span><span class="d">Both SMs' L1 instruction caches fill through the same TPC port</span></div>
+    </div>
+  </div>
+</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 8 -->
+<section id="s8">
+<h2><span class="num">§8</span> Inside one SM — the complete Ada (CC 8.9) streaming multiprocessor <span class="tog">−</span></h2>
+<div class="lede">This is the unit your kernel actually runs on, and the one whose resource limits determine
+occupancy. All 58 are identical. Every number in this section was read from this GPU.</div>
+<div class="body">
+
+<h3>SM-level resource budget <span class="tag probed">PROBED</span></h3>
+<div class="g gauto" style="margin-bottom:6px">
+  <div class="u sram"><span class="n">65,536 registers</span><span class="d">= 256 KB register file per SM · max 255 per thread</span></div>
+  <div class="u sram"><span class="n">102,400 B shared mem</span><span class="d">100 KB max per SM (of the 128 KB unified block)</span></div>
+  <div class="u sram"><span class="n">49,152 B default / block</span><span class="d">48 KB without opt-in; 101,376 B (99 KB) with <code>cudaFuncAttributeMaxDynamicSharedMemorySize</code></span></div>
+  <div class="u sram"><span class="n">1,024 B reserved</span><span class="d">driver reserve per block — you never get the full 100 KB</span></div>
+  <div class="u logic"><span class="n">1,536 threads</span><span class="d">= <b>48 warps</b> resident max per SM</span></div>
+  <div class="u logic"><span class="n">24 blocks</span><span class="d">max resident blocks per SM</span></div>
+  <div class="u logic"><span class="n">1,024 threads</span><span class="d">max per block (32 warps)</span></div>
+  <div class="u logic"><span class="n">32 threads/warp</span><span class="d">warp size — invariant on all NVIDIA hardware to date</span></div>
+</div>
+<div class="note"><b>Occupancy arithmetic on this SM.</b> 48 warps ÷ 24 blocks means you need
+<b>≥ 64 threads per block</b> to have any hope of full occupancy, and blocks of 64 threads exactly saturate
+the block slots. 65,536 regs ÷ 1,536 threads = <b>42 registers/thread</b> is the break-even point — past 42
+registers you lose warps. 100 KB ÷ 24 blocks ≈ 4.2 KB of shared memory per block at max block occupancy.</div>
+
+<div class="stack">
+  <div class="chip sram">
+    <div class="hd">SM-WIDE FRONT END</div>
+    <div class="bd"><div class="g gauto">
+      <div class="u sram"><span class="n">L1 Instruction Cache</span><span class="d">Shared by all 4 sub-partitions; fills from L2. Size not published. <span class="tag inf">INF</span></span></div>
+      <div class="u sram"><span class="n">Constant cache (c[bank])</span><span class="d">Read-only, broadcast-optimised. Backs the 64 KB <code>__constant__</code> space and kernel parameters. Full-warp same-address read is 1 cycle; divergent addresses serialise.</span></div>
+      <div class="u logic"><span class="n">Warp / block dispatch unit</span><span class="d">Accepts blocks from the CWD, allocates registers + shared memory, assigns warps to sub-partitions round-robin</span></div>
+      <div class="u logic"><span class="n">Barrier hardware</span><span class="d"><code>__syncthreads()</code> and up to 16 named barriers per block; arrive/wait split barriers (Ampere+)</span></div>
+    </div></div>
+  </div>
+  <div class="link"><div class="seg"></div><div class="lbl">warps distributed to 4 independent sub-partitions</div><div class="seg"></div></div>
+
+  <div class="row" style="gap:8px;align-items:stretch">
+    <!-- generate 4 identical sub-partitions -->
+    <div class="chip logic" style="flex:1">
+      <div class="hd" style="font-size:10.5px">SUB-PARTITION 0</div>
+      <div class="bd" style="padding:8px">
+        <div class="g" style="gap:6px">
+          <div class="u sram"><span class="n">L0 I-cache</span><span class="d">private instruction cache</span></div>
+          <div class="u logic"><span class="n">Warp scheduler</span><span class="d">12 warp slots · picks 1 ready warp/clk</span></div>
+          <div class="u logic"><span class="n">Dispatch unit</span><span class="d">1 instr → 32 lanes/clk</span></div>
+          <div class="u sram"><span class="n">Register file</span><span class="d">16,384 × 32-bit = 64 KB</span></div>
+          <div class="u sram"><span class="n">Uniform register file</span><span class="d">64 URs/warp + uniform datapath</span></div>
+          <div class="u logic"><span class="n">16 × FP32</span><span class="d">FP32-only lanes</span></div>
+          <div class="u logic"><span class="n">16 × FP32/INT32</span><span class="d">dual-purpose lanes</span></div>
+          <div class="u fixed"><span class="n">1 × Tensor Core</span><span class="d">4th gen</span></div>
+          <div class="u logic"><span class="n">4 × SFU</span><span class="d">rcp, rsqrt, sin, cos, ex2, lg2</span></div>
+          <div class="u logic"><span class="n">4 × LD/ST</span><span class="d">to MIO / L1</span></div>
+          <div class="u logic"><span class="n">Convergence barrier unit</span><span class="d">independent thread scheduling (Volta+)</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="chip logic" style="flex:1">
+      <div class="hd" style="font-size:10.5px">SUB-PARTITION 1</div>
+      <div class="bd" style="padding:8px">
+        <div class="g" style="gap:6px">
+          <div class="u sram"><span class="n">L0 I-cache</span><span class="d">private instruction cache</span></div>
+          <div class="u logic"><span class="n">Warp scheduler</span><span class="d">12 warp slots · picks 1 ready warp/clk</span></div>
+          <div class="u logic"><span class="n">Dispatch unit</span><span class="d">1 instr → 32 lanes/clk</span></div>
+          <div class="u sram"><span class="n">Register file</span><span class="d">16,384 × 32-bit = 64 KB</span></div>
+          <div class="u sram"><span class="n">Uniform register file</span><span class="d">64 URs/warp + uniform datapath</span></div>
+          <div class="u logic"><span class="n">16 × FP32</span><span class="d">FP32-only lanes</span></div>
+          <div class="u logic"><span class="n">16 × FP32/INT32</span><span class="d">dual-purpose lanes</span></div>
+          <div class="u fixed"><span class="n">1 × Tensor Core</span><span class="d">4th gen</span></div>
+          <div class="u logic"><span class="n">4 × SFU</span><span class="d">rcp, rsqrt, sin, cos, ex2, lg2</span></div>
+          <div class="u logic"><span class="n">4 × LD/ST</span><span class="d">to MIO / L1</span></div>
+          <div class="u logic"><span class="n">Convergence barrier unit</span><span class="d">independent thread scheduling (Volta+)</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="chip logic" style="flex:1">
+      <div class="hd" style="font-size:10.5px">SUB-PARTITION 2</div>
+      <div class="bd" style="padding:8px">
+        <div class="g" style="gap:6px">
+          <div class="u sram"><span class="n">L0 I-cache</span><span class="d">private instruction cache</span></div>
+          <div class="u logic"><span class="n">Warp scheduler</span><span class="d">12 warp slots · picks 1 ready warp/clk</span></div>
+          <div class="u logic"><span class="n">Dispatch unit</span><span class="d">1 instr → 32 lanes/clk</span></div>
+          <div class="u sram"><span class="n">Register file</span><span class="d">16,384 × 32-bit = 64 KB</span></div>
+          <div class="u sram"><span class="n">Uniform register file</span><span class="d">64 URs/warp + uniform datapath</span></div>
+          <div class="u logic"><span class="n">16 × FP32</span><span class="d">FP32-only lanes</span></div>
+          <div class="u logic"><span class="n">16 × FP32/INT32</span><span class="d">dual-purpose lanes</span></div>
+          <div class="u fixed"><span class="n">1 × Tensor Core</span><span class="d">4th gen</span></div>
+          <div class="u logic"><span class="n">4 × SFU</span><span class="d">rcp, rsqrt, sin, cos, ex2, lg2</span></div>
+          <div class="u logic"><span class="n">4 × LD/ST</span><span class="d">to MIO / L1</span></div>
+          <div class="u logic"><span class="n">Convergence barrier unit</span><span class="d">independent thread scheduling (Volta+)</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="chip logic" style="flex:1">
+      <div class="hd" style="font-size:10.5px">SUB-PARTITION 3</div>
+      <div class="bd" style="padding:8px">
+        <div class="g" style="gap:6px">
+          <div class="u sram"><span class="n">L0 I-cache</span><span class="d">private instruction cache</span></div>
+          <div class="u logic"><span class="n">Warp scheduler</span><span class="d">12 warp slots · picks 1 ready warp/clk</span></div>
+          <div class="u logic"><span class="n">Dispatch unit</span><span class="d">1 instr → 32 lanes/clk</span></div>
+          <div class="u sram"><span class="n">Register file</span><span class="d">16,384 × 32-bit = 64 KB</span></div>
+          <div class="u sram"><span class="n">Uniform register file</span><span class="d">64 URs/warp + uniform datapath</span></div>
+          <div class="u logic"><span class="n">16 × FP32</span><span class="d">FP32-only lanes</span></div>
+          <div class="u logic"><span class="n">16 × FP32/INT32</span><span class="d">dual-purpose lanes</span></div>
+          <div class="u fixed"><span class="n">1 × Tensor Core</span><span class="d">4th gen</span></div>
+          <div class="u logic"><span class="n">4 × SFU</span><span class="d">rcp, rsqrt, sin, cos, ex2, lg2</span></div>
+          <div class="u logic"><span class="n">4 × LD/ST</span><span class="d">to MIO / L1</span></div>
+          <div class="u logic"><span class="n">Convergence barrier unit</span><span class="d">independent thread scheduling (Volta+)</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="link"><div class="seg"></div><div class="lbl">all 4 sub-partitions share the units below</div><div class="seg"></div></div>
+
+  <div class="chip sram">
+    <div class="hd">SM-WIDE SHARED RESOURCES</div>
+    <div class="bd">
+      <div class="chip sram" style="margin-bottom:10px">
+        <div class="hd" style="font-size:10.5px">128 KB UNIFIED L1 DATA CACHE / SHARED MEMORY <span class="spec">32 banks × 4 B · 128 B/clk/SM</span></div>
+        <div class="bd">
+          <div class="g gauto">
+            <div class="u sram"><span class="n">Configurable carve-out</span><span class="d">Shared memory can be 0 / 8 / 16 / 32 / 64 / <b>100</b> KB; the remainder is L1 data cache. Set per-kernel with <code>cudaFuncAttributePreferredSharedMemoryCarveout</code>.</span></div>
+            <div class="u sram"><span class="n">Shared memory role</span><span class="d">Software-managed scratchpad, block-scoped, 32 banks. Bank conflict = two threads of a warp hitting different addresses in the same bank → serialised.</span></div>
+            <div class="u sram"><span class="n">L1 data cache role</span><span class="d">Caches global and local (spill/stack) traffic. <code>globalL1CacheSupported = 1</code>, <code>localL1CacheSupported = 1</code> <span class="tag probed">PROBED</span>. Not coherent across SMs.</span></div>
+            <div class="u sram"><span class="n">Texture / surface cache</span><span class="d">Physically the same SRAM — texture reads and <code>__ldg</code> read-only loads land here</span></div>
+            <div class="u sram"><span class="n">Bandwidth</span><span class="d">128 B/clk × 58 SM × 2.04 GHz ≈ <b>15.1 TB/s</b> aggregate shared-memory bandwidth — 50× device DRAM</span></div>
+            <div class="u sram"><span class="n">Async copy (<code>cp.async</code>)</span><span class="d">Ampere+ DMA from global → shared bypassing the register file, with <code>mbarrier</code> completion. Present on Ada.</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="g gauto">
+        <div class="u logic"><span class="n">2 × FP64 unit</span><span class="d">Per SM, not per sub-partition. <b>1/64 rate</b> → FP64 on L4 is 0.47 TFLOPS. Never use double here unless you must.</span></div>
+        <div class="u fixed"><span class="n">1 × RT Core (3rd gen)</span><span class="d">BVH traversal + ray-triangle intersection, plus Ada's new <b>Opacity Micromap Engine</b> and <b>Displaced Micro-Mesh Engine</b>. 58 on the die.</span></div>
+        <div class="u fixed"><span class="n">4 × Texture unit (TMU)</span><span class="d">Address computation, filtering (bilinear/trilinear/aniso), format conversion, normalised coordinate handling. 232 on the die.</span></div>
+        <div class="u logic"><span class="n">MIO — Memory Input/Output</span><span class="d">Queues and arbitrates all LSU traffic from the 4 sub-partitions into the L1/shared block. <code>mio_throttle</code> stalls in Nsight Compute point here.</span></div>
+        <div class="u logic"><span class="n">LSU address coalescer</span><span class="d">Merges a warp's 32 addresses into the minimum set of 32 B sectors. This is where "coalesced access" is physically decided.</span></div>
+        <div class="u sram"><span class="n">µTLB</span><span class="d">Per-SM address-translation cache — first level of the walk in §11</span></div>
+        <div class="u na"><span class="n">Tensor Memory Accelerator</span><span class="d"><span class="tag na">ABSENT</span> TMA is Hopper (CC 9.0)+. On Ada, bulk global→shared moves use <code>cp.async</code>.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>Per-SM totals, and what they multiply to across the die</h3>
+<div class="scroll"><table>
+<thead><tr><th>Unit</th><th class="num-col">Per sub-partition</th><th class="num-col">Per SM</th><th class="num-col">Per GPU (58 SM)</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td class="k">FP32 lanes ("CUDA cores")</td><td class="num-col">32</td><td class="num-col">128</td><td class="num-col">7,424</td><td>16 FP32-only + 16 FP32/INT32 shared</td></tr>
+<tr><td class="k">INT32 lanes</td><td class="num-col">16</td><td class="num-col">64</td><td class="num-col">3,712</td><td>Shared with FP32 — integer address math competes with FP work</td></tr>
+<tr><td class="k">FP64 units</td><td class="num-col">—</td><td class="num-col">2</td><td class="num-col">116</td><td>SM-level. 1/64 FP32 rate</td></tr>
+<tr><td class="k">Tensor Cores (4th gen)</td><td class="num-col">1</td><td class="num-col">4</td><td class="num-col">232</td><td>FP16 / BF16 / TF32 / FP8 / INT8 / INT4, structured sparsity 2:4</td></tr>
+<tr><td class="k">RT Cores (3rd gen)</td><td class="num-col">—</td><td class="num-col">1</td><td class="num-col">58</td><td>+ OMM and DMM engines (Ada-new)</td></tr>
+<tr><td class="k">SFU</td><td class="num-col">4</td><td class="num-col">16</td><td class="num-col">928</td><td>Transcendentals at 1/4 FP32 rate</td></tr>
+<tr><td class="k">LD/ST units</td><td class="num-col">4</td><td class="num-col">16</td><td class="num-col">928</td><td>Feed MIO → L1</td></tr>
+<tr><td class="k">Texture units</td><td class="num-col">—</td><td class="num-col">4</td><td class="num-col">232</td><td>SM-level</td></tr>
+<tr><td class="k">Warp schedulers</td><td class="num-col">1</td><td class="num-col">4</td><td class="num-col">232</td><td>1 instruction issued per scheduler per clock</td></tr>
+<tr><td class="k">Resident warps</td><td class="num-col">12</td><td class="num-col">48</td><td class="num-col">2,784</td><td>= 89,088 resident threads on the whole GPU</td></tr>
+<tr><td class="k">Registers (32-bit)</td><td class="num-col">16,384</td><td class="num-col">65,536</td><td class="num-col">3,801,088</td><td>= 14.5 MB of register-file SRAM on the die</td></tr>
+<tr><td class="k">Shared memory</td><td class="num-col">—</td><td class="num-col">100 KB max</td><td class="num-col">5.8 MB</td><td>Out of a 128 KB/SM unified block → 7.4 MB of L1/SMEM SRAM total</td></tr>
+</tbody></table></div>
+<div class="note ok"><b>On-chip SRAM census for this GPU:</b> 14.5 MB register file + 7.4 MB L1/shared +
+48 MB L2 ≈ <b>70 MB of SRAM</b>. That is nearly 3× the entire L3 of the host CPU it is attached to.</div>
+
+<h3>Peak throughput, derived from the probed clock</h3>
+<div class="scroll"><table>
+<thead><tr><th>Precision / path</th><th class="num-col">Peak</th><th>Derivation</th></tr></thead>
+<tbody>
+<tr><td class="k">FP32 (FMA)</td><td class="num-col">30.3 TFLOPS</td><td>7,424 lanes × 2 flop × 2.040 GHz</td></tr>
+<tr><td class="k">FP64</td><td class="num-col">0.47 TFLOPS</td><td>FP32 ÷ 64</td></tr>
+<tr><td class="k">TF32 Tensor</td><td class="num-col">60 / 120 TFLOPS</td><td>dense / 2:4 sparse <span class="tag spec">SPEC</span></td></tr>
+<tr><td class="k">FP16 · BF16 Tensor</td><td class="num-col">121 / 242 TFLOPS</td><td>dense / sparse <span class="tag spec">SPEC</span></td></tr>
+<tr><td class="k">FP8 Tensor</td><td class="num-col">242 / 485 TFLOPS</td><td>Ada-new E4M3/E5M2 <span class="tag spec">SPEC</span></td></tr>
+<tr><td class="k">INT8 Tensor</td><td class="num-col">242 / 485 TOPS</td><td>dense / sparse <span class="tag spec">SPEC</span></td></tr>
+<tr><td class="k">Shared memory</td><td class="num-col">15.1 TB/s</td><td>128 B/clk × 58 × 2.040 GHz</td></tr>
+<tr><td class="k">Device DRAM</td><td class="num-col">300 GB/s</td><td>192 bit × 12.502 Gbps/pin</td></tr>
+<tr><td class="k">PCIe (host)</td><td class="num-col">~14 GB/s</td><td>Gen4 ×8, pinned, real-world</td></tr>
+</tbody></table></div>
+<div class="note"><b>The ridge point.</b> 30.3 TFLOPS ÷ 300 GB/s = <b>101 FLOP per byte</b>. A kernel must do
+~101 single-precision operations per byte it reads from DRAM to be compute-bound on this GPU. Almost nothing
+naive clears that bar — which is why §8's 70 MB of on-chip SRAM, not the FP32 count, is the thing to
+design around.</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 9 -->
+<section id="s9">
+<h2><span class="num">§9</span> Sub-partition datapath — one instruction's journey <span class="tog">−</span></h2>
+<div class="lede">The warp scheduler is the beating heart of the machine. Every stall metric in Nsight Compute
+describes a warp failing one of the checks below.</div>
+<div class="body">
+<div class="stack">
+  <div class="chip sram"><div class="hd">1 · FETCH</div><div class="bd" style="font-size:11px;color:var(--tx2)">
+    Warp's program counter indexes the <b>L0 instruction cache</b>. Miss → SM's L1 I-cache → L2 → VRAM.
+    A cold or thrashing instruction footprint shows as <code>no_instruction</code> stalls; this is why very
+    large unrolled loops can slow down.</div></div>
+  <div class="link"><div class="seg"></div><div class="lbl">↓</div><div class="seg"></div></div>
+
+  <div class="chip logic"><div class="hd">2 · SCHEDULE — the eligibility test, every clock</div><div class="bd">
+    <p style="margin:0 0 8px">The scheduler holds <b>12 warp slots</b>. Each clock it examines all 12 and picks
+    <b>one</b> eligible warp. A warp is ineligible if any of these hold:</p>
+    <div class="g gauto">
+      <div class="u logic"><span class="n">Scoreboard dependency</span><span class="d">waiting on a register a prior long-latency instruction will write → <code>stall_long_sb</code> / <code>stall_short_sb</code></span></div>
+      <div class="u logic"><span class="n">Barrier</span><span class="d">parked at <code>__syncthreads()</code> until all warps of the block arrive → <code>stall_barrier</code></span></div>
+      <div class="u logic"><span class="n">Pipe busy</span><span class="d">the functional unit it needs is occupied → <code>stall_math_pipe_throttle</code>, <code>stall_mio_throttle</code></span></div>
+      <div class="u logic"><span class="n">Memory throttle</span><span class="d">LSU queue full → <code>stall_lg_throttle</code>, <code>stall_drain</code></span></div>
+      <div class="u logic"><span class="n">Instruction not fetched</span><span class="d">L0 miss in flight → <code>stall_no_instruction</code></span></div>
+      <div class="u logic"><span class="n">Branch resolve</span><span class="d">waiting on a divergent branch's convergence barrier → <code>stall_branch_resolving</code></span></div>
+    </div>
+    <div class="note ok" style="margin-bottom:0"><b>This is latency hiding, physically.</b> There is no
+    out-of-order execution and no branch speculation in an SM. The <i>only</i> mechanism for covering a
+    500-cycle DRAM latency is having another eligible warp to issue instead. 12 warps per scheduler is your
+    entire budget — occupancy is not a vanity metric, it is the size of the latency-hiding window.</div>
+  </div></div>
+  <div class="link"><div class="seg"></div><div class="lbl">↓ one warp selected</div><div class="seg"></div></div>
+
+  <div class="chip logic"><div class="hd">3 · DISPATCH &amp; OPERAND COLLECT</div><div class="bd" style="font-size:11px;color:var(--tx2)">
+    The dispatch unit issues the instruction for all 32 lanes. Operands are read from the
+    <b>64 KB register file</b> (or the <b>uniform register file</b> if the value is warp-invariant — Turing+
+    added a scalar datapath so loop counters and base addresses don't burn vector register bandwidth).
+    Active-mask from the convergence barrier unit determines which lanes participate; inactive lanes
+    consume the slot and produce nothing. <span class="hl">That is what divergence costs.</span></div></div>
+  <div class="link"><div class="seg"></div><div class="lbl">↓ routed by opcode</div><div class="seg"></div></div>
+
+  <div class="chip logic"><div class="hd">4 · EXECUTE — which pipe, and at what rate</div><div class="bd">
+    <div class="scroll" style="border:none;padding:0;background:none"><table style="margin:0">
+    <thead><tr><th>Pipe</th><th class="num-col">Width</th><th class="num-col">Clocks per warp</th><th>Instructions</th></tr></thead>
+    <tbody>
+    <tr><td class="k">FMA / FP32</td><td class="num-col">32 lanes</td><td class="num-col">1</td><td><code>FADD FMUL FFMA</code> — full rate, one warp per clock</td></tr>
+    <tr><td class="k">ALU / INT32</td><td class="num-col">16 lanes</td><td class="num-col">2</td><td><code>IADD IMAD LOP SHF</code> — half rate; shared silicon with FP32</td></tr>
+    <tr><td class="k">FP64</td><td class="num-col">2 lanes (SM)</td><td class="num-col">64</td><td><code>DADD DMUL DFMA</code> — 1/64 rate</td></tr>
+    <tr><td class="k">Tensor (MMA)</td><td class="num-col">1 core</td><td class="num-col">varies</td><td><code>HMMA IMMA QMMA</code> — operates on whole tiles, not lanes</td></tr>
+    <tr><td class="k">SFU / MUFU</td><td class="num-col">4 lanes</td><td class="num-col">8</td><td><code>MUFU.RCP RSQ SIN COS EX2 LG2</code> — 1/4 rate</td></tr>
+    <tr><td class="k">LSU / MIO</td><td class="num-col">4 lanes</td><td class="num-col">8+</td><td><code>LDG STG LDS STS LDL STL ATOM RED</code> — plus memory latency</td></tr>
+    <tr><td class="k">Uniform (UDP)</td><td class="num-col">scalar</td><td class="num-col">1</td><td><code>UIADD ULOP UMOV</code> — runs in parallel with the vector pipes, free throughput</td></tr>
+    <tr><td class="k">Branch / BRU</td><td class="num-col">—</td><td class="num-col">1+</td><td><code>BRA BSSY BSYNC EXIT</code></td></tr>
+    </tbody></table></div>
+  </div></div>
+  <div class="link s"><div class="seg"></div><div class="lbl">↓ memory instructions only</div><div class="seg"></div></div>
+
+  <div class="chip sram"><div class="hd">5 · MEMORY PATH</div><div class="bd">
+    <div class="g gauto">
+      <div class="u sram"><span class="n">Coalescer</span><span class="d">32 lane addresses → minimum set of 32 B sectors. A perfectly coalesced 4-byte-per-thread warp load = 128 B = 4 sectors. Worst case (32 scattered addresses) = 32 sectors = <b>8× the traffic</b>.</span></div>
+      <div class="u sram"><span class="n">Shared memory bank check</span><span class="d">Address ÷ 4 mod 32 = bank. Conflicts serialise into extra cycles; broadcast (all lanes same address) is free.</span></div>
+      <div class="u sram"><span class="n">L1 tag lookup</span><span class="d">Hit → data returns in ~33–38 cycles. Miss → sector request to L2.</span></div>
+      <div class="u sram"><span class="n">µTLB translation</span><span class="d">In parallel: virtual → physical (§11). TLB miss adds a page-table walk on top of everything.</span></div>
+      <div class="u sram"><span class="n">L2 via crossbar</span><span class="d">Hit ~250–350 cycles. Global atomics resolve <i>here</i>.</span></div>
+      <div class="u vram"><span class="n">GDDR6</span><span class="d">Miss → ~450–600 cycles, and the DRAM row/bank state decides where in that range you land.</span></div>
+    </div>
+  </div></div>
+  <div class="link"><div class="seg"></div><div class="lbl">↓</div><div class="seg"></div></div>
+  <div class="chip logic"><div class="hd">6 · WRITEBACK</div><div class="bd" style="font-size:11px;color:var(--tx2)">
+    Result written to the register file; scoreboard bit cleared, which is what makes any warp waiting on that
+    register eligible again. <b>In-order retirement per warp</b> — no reorder buffer anywhere in the SM.</div></div>
+</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 10 -->
+<section id="s10">
+<h2><span class="num">§10</span> Every memory space on this machine <span class="tog">−</span></h2>
+<div class="lede">Ten distinct addressable spaces, from the register file to host page cache. Sizes are this
+machine's actual values.</div>
+<div class="body">
+<div class="scroll"><table>
+<thead><tr>
+<th>Space</th><th>Physical location</th><th class="num-col">Size here</th><th>Scope</th><th>Lifetime</th>
+<th class="num-col">Latency</th><th>Cached in</th><th>Declared as</th>
+</tr></thead>
+<tbody>
+<tr><td class="k">Registers</td><td>SM sub-partition SRAM</td><td class="num-col">64 KB × 4 / SM<br>255 per thread</td><td>1 thread</td><td>thread</td><td class="num-col">~0 (pipelined)</td><td>—</td><td>plain local variables</td></tr>
+<tr><td class="k">Local memory</td><td><b>Device DRAM</b>, per-thread</td><td class="num-col">512 KB / thread max</td><td>1 thread</td><td>thread</td><td class="num-col">L1 ~35 / DRAM ~500 cy</td><td>L1 + L2</td><td>register spills, large local arrays, stack</td></tr>
+<tr><td class="k">Shared memory</td><td>SM unified L1/SMEM SRAM</td><td class="num-col">100 KB / SM<br>99 KB / block opt-in</td><td>1 block</td><td>block</td><td class="num-col">~23–30 cy</td><td>is the cache</td><td><code>__shared__</code></td></tr>
+<tr><td class="k">Distributed shared</td><td>—</td><td class="num-col">—</td><td>—</td><td>—</td><td class="num-col">—</td><td>—</td><td><span class="tag na">ABSENT</span> needs clusters (CC 9.0+)</td></tr>
+<tr><td class="k">L1 data cache</td><td>SM unified L1/SMEM SRAM</td><td class="num-col">128 KB − shared carve-out</td><td>1 SM</td><td>transient</td><td class="num-col">~33–38 cy</td><td>—</td><td>automatic; <code>__ldg</code>, <code>ld.global.nc</code></td></tr>
+<tr><td class="k">Constant memory</td><td>Device DRAM bank + per-SM constant cache</td><td class="num-col">65,536 B</td><td>grid (read-only)</td><td>application</td><td class="num-col">~5–10 cy on hit</td><td>constant cache → L1.5 → L2</td><td><code>__constant__</code>; also kernel params</td></tr>
+<tr><td class="k">Texture / surface</td><td>Device DRAM via TMU + L1</td><td class="num-col">bounded by VRAM</td><td>grid (read-only)</td><td>application</td><td class="num-col">~L1/L2 + filter</td><td>L1 (texture path) + L2</td><td><code>cudaTextureObject_t</code>; hardware interpolation &amp; clamping for free</td></tr>
+<tr><td class="k">L2 cache</td><td>On-die SRAM, 6 partitions</td><td class="num-col">50,331,648 B (48 MB)</td><td>whole GPU</td><td>transient</td><td class="num-col">~250–350 cy</td><td>—</td><td>automatic; <code>cudaAccessPolicyWindow</code> to pin ≤32 MiB</td></tr>
+<tr><td class="k">Global memory</td><td>GDDR6</td><td class="num-col">23,661,248,512 B (22.04 GiB)</td><td>whole GPU + host</td><td>application</td><td class="num-col">~450–600 cy</td><td>L1 + L2</td><td><code>cudaMalloc</code>, <code>__device__</code></td></tr>
+<tr><td class="k">Managed / unified</td><td>Migrates between GDDR6 ↔ DDR4</td><td class="num-col">oversubscribable</td><td>host + device</td><td>application</td><td class="num-col">local, or <b>µs</b> on fault</td><td>wherever it currently lives</td><td><code>cudaMallocManaged</code></td></tr>
+<tr><td class="k">Pinned host</td><td>Host DDR4, page-locked</td><td class="num-col">bounded by 30 GiB</td><td>host + device (zero-copy)</td><td>application</td><td class="num-col"><b>~1–2 µs</b> over PCIe</td><td>host L1/L2/L3; not GPU-cached</td><td><code>cudaHostAlloc</code>, <code>cudaHostRegister</code></td></tr>
+<tr><td class="k">Pageable host</td><td>Host DDR4, migratable</td><td class="num-col">30 GiB</td><td>host only (GPU needs staging)</td><td>application</td><td class="num-col">n/a — bounce buffer</td><td>host L1/L2/L3</td><td><code>malloc</code>, <code>new</code></td></tr>
+</tbody></table></div>
+
+<h3>The full read path for one <code>float</code>, in order</h3>
+<pre>thread reads  a[i]  where a is in global memory
+ │
+ ├─ 1  register?           → operand already resident, ~0 cycles                 <b>[64 KB SRAM, per sub-partition]</b>
+ ├─ 2  address computed by INT32 pipe; 32 lane addresses handed to the coalescer
+ ├─ 3  coalescer merges into 32 B sectors                                        <b>[4 sectors if perfectly coalesced]</b>
+ ├─ 4  µTLB: virtual → physical                                                  <b>[per-SM]</b>
+ │      └─ miss → GPC MMU TLB → hub MMU → page-table walk in VRAM  (§11)
+ ├─ 5  L1 data cache tag lookup                                    ~33–38 cy    <b>[≤128 KB SRAM, per SM]</b>
+ │      └─ HIT → return
+ ├─ 6  crossbar → L2 partition selected by physical address        ~250–350 cy   <b>[48 MB SRAM, chip-wide]</b>
+ │      └─ HIT → return, fill L1
+ ├─ 7  memory controller → GDDR6 bank/row activate                 ~450–600 cy   <b>[24 GB off-chip]</b>
+ │      └─ row-buffer hit is ~3× cheaper than a row miss
+ └─ 8  ONLY if managed memory and the page lives on the host:
+        GPU page fault → UVM driver interrupt → migrate 4 KB/2 MB page
+        over PCIe Gen4 ×8 → retry                                  <b>~µs — 1000× step</b></pre>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 11 -->
+<section id="s11">
+<h2><span class="num">§11</span> Address translation — two independent MMUs <span class="tog">−</span></h2>
+<div class="lede">There are two complete virtual memory systems here, and CUDA's unified address space is a
+software agreement layered over both. Neither hardware MMU knows about the other.</div>
+<div class="body">
+<div class="row" style="align-items:stretch;gap:16px">
+
+  <div class="chip host" style="flex:1">
+    <div class="hd">HOST SIDE — x86-64 paging + IOMMU</div>
+    <div class="bd">
+      <div class="stack">
+        <div class="u host"><span class="n">CPU virtual address</span><span class="d">48-bit VA, 48-bit PA <span class="tag probed">PROBED</span></span></div>
+        <div class="link h"><div class="seg"></div><div class="lbl">4-level walk</div><div class="seg"></div></div>
+        <div class="u sram"><span class="n">L1 dTLB (64) → L2 TLB (2048)</span><span class="d">4 KB, 2 MB, 1 GB entries</span></div>
+        <div class="link h"><div class="seg"></div><div class="lbl">miss</div><div class="seg"></div></div>
+        <div class="u host"><span class="n">PML4 → PDPT → PD → PT</span><span class="d">page tables in DDR4; page-walk cache accelerates upper levels</span></div>
+        <div class="link h"><div class="seg"></div><div class="lbl">plus, for a KVM guest</div><div class="seg"></div></div>
+        <div class="u fabric"><span class="n">Nested paging (AMD NPT)</span><span class="d">guest-physical → host-physical, a <i>second</i> walk in hardware <span class="tag probed">PROBED: npt flag</span></span></div>
+        <div class="link h"><div class="seg"></div><div class="lbl">for device DMA instead</div><div class="seg"></div></div>
+        <div class="u fabric"><span class="n">AMD IOMMU</span><span class="d">Translates the GPU's DMA addresses (IOVA → host PA) and enforces isolation. Every byte the copy engine reads from host memory passes through here.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chip logic" style="flex:1">
+    <div class="hd">DEVICE SIDE — NVIDIA GMMU</div>
+    <div class="bd">
+      <div class="stack">
+        <div class="u logic"><span class="n">Thread's generic address</span><span class="d">49-bit unified VA space; window bits select global / shared / local <span class="tag probed">unifiedAddressing = 1</span></span></div>
+        <div class="link l"><div class="seg"></div><div class="lbl">level 1</div><div class="seg"></div></div>
+        <div class="u sram"><span class="n">µTLB (per SM)</span><span class="d">58 of them; smallest and fastest translation cache</span></div>
+        <div class="link l"><div class="seg"></div><div class="lbl">miss</div><div class="seg"></div></div>
+        <div class="u sram"><span class="n">GPC MMU + TLB (per GPC)</span><span class="d">5 of them; shared by the GPC's 12 SMs</span></div>
+        <div class="link l"><div class="seg"></div><div class="lbl">miss</div><div class="seg"></div></div>
+        <div class="u sram"><span class="n">Hub MMU / GPU-wide TLB</span><span class="d">Last translation cache before a walk</span></div>
+        <div class="link v"><div class="seg"></div><div class="lbl">walk — reads go through L2 into VRAM</div><div class="seg"></div></div>
+        <div class="u vram"><span class="n">Page tables in GDDR6</span><span class="d">Multi-level; page sizes 4 KB / 64 KB / 2 MB. Big pages are the single best TLB optimisation available.</span></div>
+        <div class="link l"><div class="seg"></div><div class="lbl">if the PTE says "not present"</div><div class="seg"></div></div>
+        <div class="u sw"><span class="n">GPU page fault → UVM driver</span><span class="d">Replayable fault: the warp stalls, the driver migrates the page in, the access replays. Ada supports this (<code>concurrentManagedAccess = 1</code>) — it is the whole basis of oversubscribable unified memory.</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="note na"><b>The critical negative result on this machine.</b>
+<code>pageableMemoryAccessUsesHostPageTables = 0</code> and <code>hostNativeAtomicSupported = 0</code>
+<span class="tag probed">PROBED</span>. That means:
+<ul style="margin:8px 0 0">
+<li>The GPU does <b>not</b> walk the host's page tables. There is no ATS/PRI or HMM-coherent path.</li>
+<li>There is <b>no</b> cache-coherent CPU↔GPU interconnect (no NVLink-C2C, no CXL). PCIe here is
+non-coherent for GPU caches.</li>
+<li>System-wide atomics between CPU and GPU are not natively supported.</li>
+<li>Therefore unified memory works by <b>migration</b> — copying whole pages over PCIe on fault — not by
+transparent coherent access. On a Grace-Hopper system the same CUDA source has fundamentally different
+performance characteristics.</li>
+</ul></div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 12 -->
+<section id="s12">
+<h2><span class="num">§12</span> The complete latency &amp; bandwidth ladder <span class="tog">−</span></h2>
+<div class="lede">Every storage level on the machine, cheapest to most expensive. Cycle counts are GPU
+cycles at 2.04 GHz unless marked; GPU latencies are typical measured Ada figures
+<span class="tag spec">SPEC</span> since NVIDIA does not publish them.</div>
+<div class="body">
+<div class="scroll"><table>
+<thead><tr><th>#</th><th>Level</th><th class="num-col">Size</th><th class="num-col">Latency</th><th class="num-col">≈ ns</th><th class="num-col">Bandwidth</th><th class="num-col">vs. register</th></tr></thead>
+<tbody>
+<tr><td class="dim">1</td><td class="k">GPU register file</td><td class="num-col">14.5 MB total</td><td class="num-col">~0 cy</td><td class="num-col">&lt;1</td><td class="num-col">~100 TB/s</td><td class="num-col">1×</td></tr>
+<tr><td class="dim">2</td><td class="k">GPU constant cache (broadcast hit)</td><td class="num-col">per-SM</td><td class="num-col">~5–10 cy</td><td class="num-col">~4</td><td class="num-col">4 B/clk/warp</td><td class="num-col">~10×</td></tr>
+<tr><td class="dim">3</td><td class="k">GPU shared memory</td><td class="num-col">100 KB/SM · 5.8 MB</td><td class="num-col">~23–30 cy</td><td class="num-col">~13</td><td class="num-col">15.1 TB/s</td><td class="num-col">~30×</td></tr>
+<tr><td class="dim">4</td><td class="k">GPU L1 data cache</td><td class="num-col">≤128 KB/SM · 7.4 MB</td><td class="num-col">~33–38 cy</td><td class="num-col">~17</td><td class="num-col">~12 TB/s</td><td class="num-col">~35×</td></tr>
+<tr><td class="dim">5</td><td class="k">GPU L2 cache</td><td class="num-col">48 MB</td><td class="num-col">~250–350 cy</td><td class="num-col">~145</td><td class="num-col">~2–3 TB/s</td><td class="num-col">~300×</td></tr>
+<tr><td class="dim">6</td><td class="k">GPU GDDR6 (row hit)</td><td class="num-col">22.04 GiB</td><td class="num-col">~450 cy</td><td class="num-col">~220</td><td class="num-col">300 GB/s</td><td class="num-col">~450×</td></tr>
+<tr><td class="dim">7</td><td class="k">GPU GDDR6 (row miss)</td><td class="num-col">22.04 GiB</td><td class="num-col">~600 cy</td><td class="num-col">~295</td><td class="num-col">300 GB/s</td><td class="num-col">~600×</td></tr>
+<tr><td class="dim">8</td><td class="k">Host L1d <span class="dim">(CPU cycles @ ~2.65 GHz)</span></td><td class="num-col">32 KiB</td><td class="num-col">~4 cy</td><td class="num-col">~1.5</td><td class="num-col">~200 GB/s/core</td><td class="num-col">—</td></tr>
+<tr><td class="dim">9</td><td class="k">Host L2</td><td class="num-col">512 KiB</td><td class="num-col">~13 cy</td><td class="num-col">~5</td><td class="num-col">~100 GB/s/core</td><td class="num-col">—</td></tr>
+<tr><td class="dim">10</td><td class="k">Host L3</td><td class="num-col">16 MiB</td><td class="num-col">~46 cy</td><td class="num-col">~17</td><td class="num-col">~50 GB/s/core</td><td class="num-col">—</td></tr>
+<tr><td class="dim">11</td><td class="k">Host DDR4</td><td class="num-col">30 GiB</td><td class="num-col">~250 cy</td><td class="num-col">~85–110</td><td class="num-col">~205 GB/s socket</td><td class="num-col">—</td></tr>
+<tr><td class="dim">12</td><td class="k">GPU → pinned host over PCIe</td><td class="num-col">30 GiB</td><td class="num-col">~2,000–4,000 cy</td><td class="num-col"><b>~1,000–2,000</b></td><td class="num-col">~14 GB/s</td><td class="num-col"><b>~3,000×</b></td></tr>
+<tr><td class="dim">13</td><td class="k">Kernel launch (doorbell → first warp)</td><td>—</td><td class="num-col">—</td><td class="num-col"><b>~3,000–10,000</b></td><td>—</td><td class="num-col"><b>~10,000×</b></td></tr>
+<tr><td class="dim">14</td><td class="k">UVM page fault + 4 KB migration</td><td>—</td><td class="num-col">—</td><td class="num-col"><b>~10,000–30,000</b></td><td class="num-col">~14 GB/s</td><td class="num-col"><b>~50,000×</b></td></tr>
+</tbody></table></div>
+<div class="note"><b>The two cliffs that matter.</b> Between step 4 and step 5 you leave the SM: <b>10×</b>.
+Between step 5 and step 6 you leave the die: <b>2×</b> in latency but you hit a hard 300 GB/s ceiling.
+Between step 7 and step 12 you leave the <i>board</i>: <b>5×</b> in latency and <b>21×</b> in bandwidth.
+Optimisation work on this machine is almost entirely about not crossing lines 4→5 and 7→12.</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 13 -->
+<section id="s13">
+<h2><span class="num">§13</span> Clock &amp; power domains <span class="tog">−</span></h2>
+<div class="lede">The L4 is a 72 W single-slot passively-cooled card. That envelope, not the silicon, is
+usually what limits sustained throughput.</div>
+<div class="body">
+<div class="row">
+  <div class="chip logic" style="flex:1"><div class="hd">GPU CLOCK DOMAINS <span class="tag probed">PROBED</span></div><div class="bd">
+    <dl class="kv">
+      <dt>Max SM / graphics clock</dt><dd>2,040 MHz</dd>
+      <dt>Max memory clock</dt><dd>6,251 MHz (I/O) → 12.502 Gbps/pin</dd>
+      <dt>Observed idle state</dt><dd>P0, 29 W / 72 W, 50 °C, 0 % util</dd>
+      <dt>Independent domains</dt><dd>SM/GPC · L2 &amp; XBAR · memory PHY · video engines · host interface</dd>
+      <dt>Application clocks</dt><dd>Deprecated in driver 595 — DVFS is fully firmware-managed by the GSP/PMU</dd>
+    </dl>
+  </div></div>
+  <div class="chip fabric" style="flex:1"><div class="hd">POWER &amp; THERMAL</div><div class="bd">
+    <dl class="kv">
+      <dt>Board power limit</dt><dd>72.00 W <span class="tag probed">PROBED</span></dd>
+      <dt>Form factor</dt><dd>Single-slot, low-profile, <b>passive</b> — cooled entirely by chassis airflow <span class="tag spec">SPEC</span></dd>
+      <dt>Power connector</dt><dd>None — fully bus-powered from the PCIe slot's 75 W <span class="tag spec">SPEC</span></dd>
+      <dt>Throttle reasons to watch</dt><dd><code>SW Power Cap</code> and <code>HW Thermal Slowdown</code> in <code>nvidia-smi -q -d PERFORMANCE</code></dd>
+      <dt>Practical consequence</dt><dd>A dense FP32 or tensor kernel will hit the 72 W cap and clock down well below 2,040 MHz. <b>Measure sustained, not burst, throughput on this card.</b></dd>
+    </dl>
+  </div></div>
+  <div class="chip host" style="flex:1"><div class="hd">HOST CLOCKS</div><div class="bd">
+    <dl class="kv">
+      <dt>EPYC 7R13 base / boost</dt><dd>2.65 / 3.50 GHz <span class="tag spec">SPEC</span></dd>
+      <dt>BogoMIPS reported</dt><dd>5299.99 → 2.65 GHz base confirmed <span class="tag probed">PROBED</span></dd>
+      <dt>TSC</dt><dd><code>constant_tsc</code>, <code>nonstop_tsc</code>, <code>tsc_known_freq</code> — the TSC is a reliable timebase for host-side CUDA timing</dd>
+      <dt>Frequency control</dt><dd>None from inside the guest — the hypervisor owns P-states</dd>
+    </dl>
+  </div></div>
+</div>
+<div class="note"><b>Vulnerability mitigations are a measurable tax here</b> <span class="tag probed">PROBED</span>:
+Retpolines, IBRS_FW, STIBP always-on, RSB filling, Safe RET, and <code>Clear CPU buffers</code> for TSA are
+all active. These add cost to every syscall and context switch — which means every <code>cudaMemcpy</code>
+and every synchronous CUDA API call pays a little more on this box than on bare metal.</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 14 -->
+<section id="s14">
+<h2><span class="num">§14</span> End-to-end trace — one <code>cudaMemcpy</code> and one kernel launch through every component <span class="tog">−</span></h2>
+<div class="lede">Tying it together: this is the complete list of hardware blocks a single vector-add touches,
+in order, on this exact machine.</div>
+<div class="body">
+<pre><b>PHASE 1 — allocate</b>
+  cudaMalloc(&d_a, N*4)
+   ├─ libcudart → libcuda → ioctl to nvidia.ko
+   ├─ driver picks a device VA range in the 49-bit unified space
+   ├─ driver allocates physical GDDR6 pages via the GPU memory manager
+   ├─ driver writes <b>page-table entries into VRAM</b> (via BAR1 or a copy engine)
+   └─ GMMU TLBs invalidated for that range
+
+<b>PHASE 2 — host → device copy</b>  (pinned source, the fast path)
+  cudaMemcpyAsync(d_a, h_a, N*4, H2D, stream)
+   ├─  1  driver encodes a copy method into the <b>pushbuffer</b> (ring buffer in memory)
+   ├─  2  CPU issues ONE 4-byte MMIO write to the <b>doorbell register in BAR0</b>
+   │        └─ crosses: core → L1/L2 → L3 → Infinity Fabric → IOD → PCIe root complex
+   │           → PCIe Gen4 ×8 link → GPU <b>Host Interface</b>
+   ├─  3  GPU <b>PBDMA</b> DMA-reads the pushbuffer back across PCIe
+   ├─  4  <b>Front End</b> decodes the method; <b>GigaThread Engine</b> schedules the channel
+   ├─  5  <b>Copy Engine 0</b> issues PCIe read requests (MaxReadReq 512 B)
+   │        └─ each request: <b>AMD IOMMU</b> translates IOVA → host PA
+   │           → IOD <b>probe filter</b> snoops CPU caches for coherence
+   │           → <b>UMC</b> → <b>DDR4</b> row activate → data returns as 128 B TLPs
+   ├─  6  data lands in GPU: Host Interface → <b>XBAR</b> → <b>L2 partition</b> → <b>memory controller</b> → <b>GDDR6</b>
+   └─  7  Copy Engine writes a <b>semaphore/fence</b> value; optionally raises <b>MSI-X</b>
+
+<b>PHASE 3 — kernel launch</b>
+  vecAdd&lt;&lt;&lt;grid, 256&gt;&gt;&gt;(d_a, d_b, d_c, N)
+   ├─  1  kernel params (≤4 KB) copied into the <b>constant memory bank</b>
+   ├─  2  launch method → pushbuffer → doorbell → PBDMA → Front End   (as above)
+   ├─  3  <b>GigaThread Engine / Compute Work Distributor</b> receives the grid
+   ├─  4  CWD computes per-SM occupancy from: 256 threads/block, registers/thread,
+   │        shared mem/block → against 1536 threads, 65536 regs, 100 KB, 24 blocks per SM
+   ├─  5  blocks dispatched across <b>5 GPCs → 29 TPCs → 58 SMs</b>, order unspecified
+   ├─  6  each SM's dispatch unit allocates registers + shared memory, splits the
+   │        block's 8 warps across the <b>4 sub-partitions</b> (2 warps each)
+   ├─  7  per warp: <b>L0 I-cache</b> fetch → <b>warp scheduler</b> eligibility → <b>dispatch</b>
+   ├─  8  <b>INT32 pipe</b> computes i = blockIdx.x*blockDim.x + threadIdx.x
+   ├─  9  <b>LSU</b> issues LDG → <b>coalescer</b> merges 32 addresses into 4 × 32 B sectors
+   ├─ 10  <b>µTLB</b> → (miss) <b>GPC MMU</b> → <b>hub MMU</b> → page-table walk in VRAM
+   ├─ 11  <b>L1 data cache</b> tag lookup → miss → <b>XBAR</b> → <b>L2</b> → miss → <b>GDDR6</b>
+   ├─ 12  ~500 cycles of latency, covered <i>only</i> by the other 11 warps per scheduler
+   ├─ 13  <b>FMA pipe</b>: c = a + b, one warp per clock
+   ├─ 14  <b>LSU</b> issues STG → coalesce → L1 (write-through for global) → L2 → GDDR6
+   └─ 15  <b>EXIT</b>; SM frees the block's registers and shared memory; CWD sends the next block
+
+<b>PHASE 4 — device → host, and synchronise</b>
+  cudaMemcpyAsync(h_c, d_c, N*4, D2H, stream); cudaStreamSynchronize(stream)
+   ├─  1  <b>Copy Engine 1</b> reads GDDR6 → L2 → XBAR → Host Interface
+   ├─  2  PCIe writes → IOMMU translate → IOD probe filter invalidates stale CPU lines
+   │        → UMC → DDR4
+   ├─  3  GPU writes the completion <b>fence</b> into pinned host memory
+   └─  4  host either spin-polls that fence (low latency, burns a core) or blocks on
+          the <b>MSI-X interrupt</b> (low CPU, ~µs wakeup latency)</pre>
+<div class="note ok"><b>Count the crossings.</b> A trivial vector-add touches roughly <b>35 distinct
+hardware blocks</b> and crosses the PCIe link four times. Two of those crossings (phase 2 and phase 4) move
+all the data at 14 GB/s, while phase 3 runs at 300 GB/s. For any kernel with O(1) arithmetic per element,
+<span class="hl">the PCIe transfers dominate totally</span> — which is the entire argument for keeping data
+resident on the device across many kernels rather than round-tripping.</div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 15 -->
+<section id="s15">
+<h2><span class="num">§15</span> What this machine does <em>not</em> have <span class="tag na">important</span> <span class="tog">−</span></h2>
+<div class="lede">Half of reading an architecture correctly is knowing which features in the CUDA
+documentation do not apply to you. All of these are absent here and all of them appear in tutorials.</div>
+<div class="body">
+<div class="scroll"><table>
+<thead><tr><th>Feature</th><th>Needs</th><th>Evidence it's absent</th><th>What to use instead on this GPU</th></tr></thead>
+<tbody>
+<tr><td class="k">Thread block clusters</td><td>Hopper CC 9.0+</td><td><code>clusterLaunch = 0</code> <span class="tag probed">PROBED</span></td><td>Plain grids; cooperate via L2 or grid-wide sync</td></tr>
+<tr><td class="k">Distributed shared memory (DSMEM)</td><td>clusters</td><td>follows from the above</td><td>Stage through L2 — 48 MB makes this viable</td></tr>
+<tr><td class="k">Tensor Memory Accelerator (TMA)</td><td>Hopper CC 9.0+</td><td>architecture generation</td><td><code>cp.async</code> / <code>memcpy_async</code> pipelines</td></tr>
+<tr><td class="k">NVLink / NVSwitch</td><td>NVLink-capable board</td><td><code>nvidia-smi topo -m</code> shows a single GPU, no NV# links <span class="tag probed">PROBED</span></td><td>Nothing — single-GPU machine. Multi-GPU would go over PCIe.</td></tr>
+<tr><td class="k">Cache-coherent CPU↔GPU (NVLink-C2C, CXL)</td><td>Grace-Hopper / MI300-class</td><td><code>pageableMemoryAccessUsesHostPageTables = 0</code>, <code>hostNativeAtomicSupported = 0</code> <span class="tag probed">PROBED</span></td><td>Explicit copies, or UVM with <code>cudaMemPrefetchAsync</code></td></tr>
+<tr><td class="k">HBM</td><td>A100/H100-class</td><td>GDDR6, 192-bit, 300 GB/s <span class="tag probed">PROBED</span></td><td>Design for 300 GB/s and lean on the 48 MB L2</td></tr>
+<tr><td class="k">Fast FP64 / FP64 tensor cores</td><td>GA100, GH100</td><td>Ada FP64 rate is 1/64 <span class="tag spec">SPEC</span></td><td>FP32, or TF32 tensor for mixed precision</td></tr>
+<tr><td class="k">MIG (Multi-Instance GPU)</td><td>A100/H100</td><td><code>MIG M.: N/A</code> <span class="tag probed">PROBED</span></td><td>MPS for multi-process sharing (<code>concurrentKernels = 1</code>)</td></tr>
+<tr><td class="k">DPX instructions</td><td>Hopper CC 9.0+</td><td>architecture generation</td><td>Hand-written min/max/add sequences</td></tr>
+<tr><td class="k">Display output</td><td>board-level connectors</td><td>L4 is a headless datacenter card <span class="tag spec">SPEC</span></td><td>Render offscreen; encode with NVENC</td></tr>
+<tr><td class="k">Second NUMA node</td><td>2-socket host / larger instance</td><td><code>NUMA node(s): 1</code>, <code>node0 CPU(s): 0-7</code> <span class="tag probed">PROBED</span></td><td>No NUMA pinning needed — one node, GPU affinity is trivially 0-7</td></tr>
+<tr><td class="k">PCIe Gen5, or even Gen4 ×16</td><td>host platform</td><td><code>LnkSta: Width x8 (downgraded)</code> <span class="tag probed">PROBED</span></td><td>Budget ~14 GB/s, not 28 or 55. Halve your transfer expectations.</td></tr>
+<tr><td class="k">GPUDirect RDMA / Storage <span class="tag inf">UNVERIFIED</span></td><td>driver + NIC/NVMe support</td><td>Not probed. ENA and NVMe sit on <i>different</i> host bridges from the GPU, so peer-to-peer would traverse the root complex.</td><td>Test before designing around it</td></tr>
+</tbody></table></div>
+</div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════ 16 -->
+<section id="s16">
+<h2><span class="num">§16</span> Probe appendix — how every number above was obtained <span class="tog">−</span></h2>
+<div class="lede">Reproduce the whole document on any machine by running these. Anything not derivable from
+this list is marked <span class="tag spec">SPEC</span> or <span class="tag inf">INFERRED</span> above.</div>
+<div class="body">
+
+<h4>Commands used</h4>
+<pre>lscpu                                     # cores, threads, cache totals, flags, mitigations, NUMA
+cat /sys/devices/system/cpu/cpu0/cache/index*/{level,type,size,ways_of_associativity,\
+    coherency_line_size,number_of_sets,shared_cpu_list}
+free -h ; cat /proc/meminfo ; getconf PAGE_SIZE
+cat /sys/kernel/mm/transparent_hugepage/enabled
+lspci -tv                                 # full PCIe topology
+sudo lspci -vv -s 31:00.0                 # LnkCap/LnkSta, BAR regions, MaxPayload
+nvidia-smi ; nvidia-smi -q ; nvidia-smi topo -m
+nvidia-smi --query-gpu=clocks.max.sm,clocks.max.mem,power.limit,\
+    pcie.link.gen.max,pcie.link.width.max,memory.total,name,compute_cap --format=csv
+cat /proc/driver/nvidia/version
+nvcc device_query.cu -o dq &amp;&amp; ./dq       # cudaGetDeviceProperties + cudaDeviceGetAttribute</pre>
+
+<h4>Key raw output — host</h4>
+<pre>Vendor ID:              AuthenticAMD
+Model name:             AMD EPYC 7R13 Processor
+CPU family: 25   Model: 1   Stepping: 1        (Zen 3 / Milan)
+CPU(s): 8   Thread(s) per core: 2   Core(s) per socket: 4   Socket(s): 1
+BogoMIPS:               5299.99
+L1d cache:  128 KiB (4 instances)     L1i cache: 128 KiB (4 instances)
+L2 cache:     2 MiB (4 instances)     L3 cache:   16 MiB (1 instance)
+NUMA node(s): 1        NUMA node0 CPU(s): 0-7
+Hypervisor vendor: KVM  Virtualization type: full
+Address sizes: 48 bits physical, 48 bits virtual
+Flags (selected): avx avx2 fma f16c aes sha_ni vaes vpclmulqdq clwb clflushopt
+                  pdpe1gb rdtscp constant_tsc nonstop_tsc npt nrip_save
+                  <b>(no avx512 — Zen 3 is 256-bit)</b>
+
+MemTotal: 31621964 kB    MemFree: 22423872 kB    MemAvailable: 27680056 kB
+Swap: 0B                 PAGE_SIZE: 4096         THP: always [madvise] never</pre>
+
+<h4>Key raw output — PCIe</h4>
+<pre>-+-[0000:30]---00.0-[31]----00.0  NVIDIA Corporation AD104GL [L4]
+
+DevCap:  MaxPayload 256 bytes, PhantFunc 0, Latency L0s unlimited, L1 &lt;64us
+         MaxPayload 128 bytes, MaxReadReq 512 bytes
+LnkCap:  Port #0, Speed 16GT/s, Width x16, ASPM not supported
+LnkSta:  Speed 16GT/s (ok), <b>Width x8 (downgraded)</b>
+LnkCap2: Supported Link Speeds: 2.5-16GT/s, Crosslink- Retimer+ 2Retimers+ DRS-
+LnkSta2: Current De-emphasis Level: -3.5dB, EqualizationComplete+ EqualizationPhase1+
+
+Region 0: Memory at cd000000      (32-bit, non-prefetchable) [size=16M]   <b>BAR0 regs</b>
+Region 1: Memory at 20800000000   (64-bit, prefetchable)     [size=32G]   <b>BAR1 framebuffer</b>
+Region 3: Memory at 20032000000   (64-bit, prefetchable)     [size=32M]   <b>BAR3 instance mem</b>
+Kernel driver in use: nvidia</pre>
+
+<h4>Key raw output — GPU</h4>
+<pre>NVRM version: NVIDIA UNIX Open Kernel Module for x86_64  595.71.05
+CUDA Version: 13.2      GPU 0: NVIDIA L4    Bus-Id 00000000:31:00.0
+P0, 29W / 72W, 50C, 0% util, 0MiB / 23034MiB, ECC On, MIG N/A
+nvidia-smi topo -m:  GPU0  X   CPU Affinity 0-7   NUMA Affinity 0   (no NVLink)
+
+<b>cudaGetDeviceProperties / cudaDeviceGetAttribute:</b>
+Name:                       NVIDIA L4          Compute capability:      8.9
+multiProcessorCount:        58                 warpSize:                32
+maxThreadsPerMultiProcessor:1536               maxBlocksPerMultiprocessor: 24
+maxThreadsPerBlock:         1024               maxThreadsDim:      1024 × 1024 × 64
+maxGridSize:                2147483647 × 65535 × 65535
+regsPerBlock:               65536              regsPerMultiprocessor:   65536
+sharedMemPerBlock:          49152              sharedMemPerBlockOptin:  101376
+sharedMemPerMultiprocessor: 102400             reservedSharedMemPerBlock: 1024
+l2CacheSize:                50331648           persistingL2CacheMaxSize: 34603008
+accessPolicyMaxWindowSize:  134213632          totalConstMem:           65536
+totalGlobalMem:             23661248512        memoryBusWidth:          192
+memoryClockRate:            6251000 kHz        clockRate:            2040000 kHz
+ECCEnabled:                 1                  asyncEngineCount:        2
+concurrentKernels:          1                  cooperativeLaunch:       1
+<b>clusterLaunch:              0</b>                  globalL1CacheSupported:  1
+localL1CacheSupported:      1                  memoryPoolsSupported:    1
+unifiedAddressing:          1                  managedMemory:           1
+concurrentManagedAccess:    1                  hostRegisterSupported:   1
+pageableMemoryAccess:       1                  sparseCudaArraySupported: 1
+<b>pageableMemoryAccessUsesHostPageTables: 0</b>   <b>hostNativeAtomicSupported: 0</b>
+directManagedMemAccessFromHost: 0              gpuOverlap:              1</pre>
+
+<div class="note"><b>Note on <code>clockRate</code> and <code>memoryClockRate</code>.</b> Both fields were
+<i>removed</i> from <code>cudaDeviceProp</code> in CUDA 13. They must now be read via
+<code>cudaDeviceGetAttribute(&amp;v, cudaDevAttrClockRate, dev)</code> and
+<code>cudaDevAttrMemoryClockRate</code>. Older device-query code will not compile against CUDA 13.2 on this
+machine.</div>
+
+<h4>Derived quantities and their arithmetic</h4>
+<pre>FP32 lanes           = 58 SM × 128 lanes/SM                    = 7,424
+FP32 peak            = 7,424 × 2 flop × 2.040e9               = 30.29 TFLOPS
+Resident threads     = 58 × 1,536                             = 89,088   (2,784 warps)
+Register file SRAM   = 58 × 65,536 × 4 B                      = 14.5 MB
+L1/SMEM SRAM         = 58 × 128 KB                            = 7.42 MB
+Total on-chip SRAM   = 14.5 + 7.42 + 48                       ≈ 70 MB
+DRAM bandwidth       = 6,251 MHz × 2 (DDR) × 192 bit ÷ 8      = 300.1 GB/s
+Arithmetic intensity = 30.29e12 ÷ 300.1e9                     = 101 FLOP/byte  (ridge point)
+SMEM bandwidth       = 32 banks × 4 B × 58 SM × 2.040e9       = 15.1 TB/s
+PCIe Gen4 ×8         = 8 × 16 GT/s × 128/130 ÷ 8              = 15.75 GB/s theoretical
+Occupancy break-even = 65,536 regs ÷ 1,536 threads            = 42 registers/thread
+Min block size       = 1,536 threads ÷ 24 blocks              = 64 threads/block
+ECC capacity cost    = 24e9 B raw → 23,661,248,512 B usable   ≈ 6% reserved
+GDDR6 packages       = 24 GB ÷ 2 GB per 16 Gb device          = 12 devices, clamshell on 6 channels</pre>
+</div>
+</section>
+
+<footer style="border-top:1px solid var(--line);padding-top:20px;color:var(--tx3);font-size:11px">
+Probed 2026-08-26 on this host. Driver NVRM 595.71.05 / CUDA 13.2.
+Values marked <span class="tag spec">SPEC</span> come from the NVIDIA Ada Lovelace architecture whitepaper,
+the L4 datasheet, and AMD Zen 3 documentation; values marked <span class="tag inf">INFERRED</span> are
+derived or hidden by the hypervisor. Latency figures for GPU cache levels are typical measured
+Ada/Ampere values — NVIDIA does not publish them, so treat them as order-of-magnitude.
+Re-run §16 to regenerate everything for a different machine.
+</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('h2 .tog').forEach(t=>{
+  t.addEventListener('click',()=>{
+    const s=t.closest('section');
+    s.classList.toggle('collapsed');
+    t.textContent=s.classList.contains('collapsed')?'+':'−';
+  });
+});
+const btn=document.getElementById('toggleAll');
+btn.addEventListener('click',()=>{
+  const collapse=btn.textContent.trim()==='collapse all';
+  document.querySelectorAll('section').forEach(s=>{
+    s.classList.toggle('collapsed',collapse);
+    const t=s.querySelector('h2 .tog');
+    if(t) t.textContent=collapse?'+':'−';
+  });
+  btn.textContent=collapse?'expand all':'collapse all';
+});
+</script>
+</body>
+</html>

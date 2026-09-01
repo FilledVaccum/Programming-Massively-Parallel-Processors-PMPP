@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Physical Floorplan — where every component actually sits · EPYC 7R13 + NVIDIA L4 (AD104)</title>
+<style>
+:root{
+  --bg:#08090d; --bg2:#0e1016; --bg3:#141821; --line:#232936; --line2:#333c4f;
+  --tx:#dde3ee; --tx2:#98a3b8; --tx3:#69738a;
+  --si:#7c8aa8;        /* silicon substrate */
+  --sram:#b57bff;      --sram-bg:#b57bff1a;
+  --logic:#3ecf8e;     --logic-bg:#3ecf8e1a;
+  --phy:#f0a848;       --phy-bg:#f0a8481a;
+  --fixed:#f6d365;     --fixed-bg:#f6d3651a;
+  --vram:#ff6b8a;      --vram-bg:#ff6b8a1a;
+  --host:#4a9eff;      --host-bg:#4a9eff1a;
+  --pwr:#ff9f43;       --pwr-bg:#ff9f431a;
+  --off:#5a6478;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"DejaVu Sans Mono",monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.6 var(--mono)}
+a{color:var(--host);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1500px;margin:0 auto;padding:0 24px 130px}
+header.top{padding:44px 0 20px;border-bottom:1px solid var(--line)}
+h1{font-size:24px;margin:0 0 7px;letter-spacing:-.4px;font-weight:600}
+.sub{color:var(--tx2);font-size:12.5px;max-width:1050px}
+.sub b{color:var(--tx)}
+nav{position:sticky;top:0;z-index:80;background:#08090df2;backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);padding:9px 0;margin-bottom:30px}
+nav .inner{max-width:1500px;margin:0 auto;padding:0 24px;display:flex;flex-wrap:wrap;gap:5px}
+nav a{font-size:11px;color:var(--tx2);padding:3px 8px;border:1px solid var(--line);border-radius:4px;white-space:nowrap}
+nav a:hover{color:var(--tx);border-color:var(--line2);background:var(--bg3);text-decoration:none}
+section{margin:0 0 64px;scroll-margin-top:58px}
+h2{font-size:17px;margin:0 0 5px;font-weight:600;display:flex;gap:10px;align-items:baseline}
+h2 .num{color:var(--tx3);font-size:12px;font-weight:400;min-width:30px}
+h3{font-size:12.5px;margin:30px 0 11px;color:var(--tx);font-weight:600;text-transform:uppercase;
+  letter-spacing:.9px;border-left:3px solid var(--line2);padding-left:9px}
+h4{font-size:11px;margin:16px 0 7px;color:var(--tx2);font-weight:600;letter-spacing:.6px;text-transform:uppercase}
+.lede{color:var(--tx2);font-size:12.5px;margin:0 0 20px;padding-left:40px;max-width:1010px}
+p{margin:0 0 12px;color:var(--tx2);font-size:12.5px;max-width:1050px}
+code{background:var(--bg3);border:1px solid var(--line);border-radius:3px;padding:.5px 4px;font-size:11px;color:var(--tx)}
+ul{margin:0 0 12px;padding-left:20px;color:var(--tx2);font-size:12.5px} li{margin-bottom:5px}
+li b,p b{color:var(--tx)}
+hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+
+/* ════ FLOORPLAN ENGINE ════ */
+.fpwrap{border:1px solid var(--line);border-radius:8px;background:var(--bg2);padding:14px;margin:0 0 8px;overflow-x:auto}
+.fpwrap>.cap{font-size:10.5px;color:var(--tx3);margin:0 0 10px;letter-spacing:.4px}
+.fpwrap>.cap b{color:var(--tx2)}
+.fp{position:relative;min-width:640px;background:#0a0c11;border:2px solid var(--si);
+  border-radius:3px;box-shadow:inset 0 0 60px #00000090}
+.fp.pkg{border-color:#4b5568;border-width:3px;background:#0c0e13}
+.fp.pcb{border-color:#1f6b3a;border-width:2px;background:#08150d;border-radius:2px}
+.b{position:absolute;border:1px solid;border-radius:2px;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;
+  padding:2px 3px;text-align:center;font-size:9.5px;line-height:1.2;cursor:default}
+.b .l{font-weight:700;letter-spacing:.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.b .s{font-size:8px;color:#ffffff88;margin-top:1px;line-height:1.15}
+.b:hover{outline:1px solid #fff6;z-index:20}
+/* domain colours */
+.b.sram{border-color:var(--sram);background:var(--sram-bg);color:#d9c2ff}
+.b.logic{border-color:var(--logic);background:var(--logic-bg);color:#a8f0cd}
+.b.phy{border-color:var(--phy);background:var(--phy-bg);color:#ffd9a0}
+.b.fixed{border-color:var(--fixed);background:var(--fixed-bg);color:#ffeeb0}
+.b.vram{border-color:var(--vram);background:var(--vram-bg);color:#ffc2ce}
+.b.host{border-color:var(--host);background:var(--host-bg);color:#b8d9ff}
+.b.pwr{border-color:var(--pwr);background:var(--pwr-bg);color:#ffd4a8}
+.b.off{border-color:var(--off);background:#5a647812;color:#8b94a8;border-style:dashed}
+.b.ghost{border-color:#ffffff20;background:#ffffff06;color:#8b94a8;border-style:dashed}
+/* die-shot textures — what you'd actually see under a microscope */
+.tx-sram{background-image:repeating-linear-gradient(0deg,#ffffff12 0 1px,transparent 1px 4px),
+                         repeating-linear-gradient(90deg,#ffffff10 0 1px,transparent 1px 3px)}
+.tx-lane{background-image:repeating-linear-gradient(90deg,#ffffff1c 0 2px,transparent 2px 5px)}
+.tx-mac{background-image:repeating-linear-gradient(0deg,#ffffff14 0 1px,transparent 1px 4px),
+                        repeating-linear-gradient(90deg,#ffffff14 0 1px,transparent 1px 4px)}
+.tx-logic{background-image:radial-gradient(#ffffff14 .5px,transparent .6px);background-size:4px 4px}
+.tx-phy{background-image:repeating-linear-gradient(0deg,#ffffff18 0 2px,transparent 2px 6px)}
+.tx-off{background-image:repeating-linear-gradient(45deg,#ff6b8a26 0 3px,transparent 3px 8px)}
+.tx-ball{background-image:radial-gradient(#ffffff28 1.4px,transparent 1.6px);background-size:7px 7px}
+/* rulers */
+.ruler{position:relative;height:16px;margin-top:6px;min-width:640px;border-top:1px solid var(--line2)}
+.ruler .tick{position:absolute;top:0;width:1px;height:5px;background:var(--line2)}
+.ruler .lab{position:absolute;top:5px;font-size:8.5px;color:var(--tx3);transform:translateX(-50%);white-space:nowrap}
+.vruler{position:absolute;left:-34px;top:0;bottom:0;width:30px;border-right:1px solid var(--line2)}
+.vruler .lab{position:absolute;right:4px;font-size:8.5px;color:var(--tx3);transform:translateY(-50%)}
+.edgelbl{position:absolute;font-size:8.5px;color:var(--tx3);letter-spacing:1.2px;text-transform:uppercase}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 24px}
+.legend .it{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:5px;
+  padding:4px 9px;font-size:10.5px;color:var(--tx2);background:var(--bg2)}
+.legend .px{width:22px;height:12px;border-radius:2px;border:1px solid;flex:none}
+
+/* tables */
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:7px;background:var(--bg2);padding:2px 10px 0}
+table{width:100%;border-collapse:collapse;font-size:11px;margin:0 0 8px}
+th,td{text-align:left;padding:6px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--tx3);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.7px;border-bottom-color:var(--line2)}
+td{color:var(--tx2)} td.k{color:var(--tx);font-weight:600;white-space:nowrap}
+.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr:hover{background:var(--bg3)}
+
+/* notes / tags */
+.note{border-left:3px solid var(--phy);background:var(--phy-bg);padding:10px 13px;font-size:12px;
+  color:var(--tx2);margin:14px 0;border-radius:0 5px 5px 0;max-width:1050px}
+.note b{color:var(--phy)}
+.note.ok{border-left-color:var(--logic);background:var(--logic-bg)} .note.ok b{color:var(--logic)}
+.note.warn{border-left-color:var(--vram);background:var(--vram-bg)} .note.warn b{color:var(--vram)}
+.tag{display:inline-block;font-size:8.5px;padding:1px 5px;border-radius:3px;letter-spacing:.5px;
+  border:1px solid var(--line2);color:var(--tx3);font-weight:700;vertical-align:middle}
+.tag.p{border-color:#3ecf8e77;color:var(--logic);background:var(--logic-bg)}
+.tag.s{border-color:#4a9eff77;color:var(--host);background:var(--host-bg)}
+.tag.r{border-color:#f0a84877;color:var(--phy);background:var(--phy-bg)}
+pre{background:var(--bg2);border:1px solid var(--line);border-radius:6px;padding:11px 13px;
+  overflow-x:auto;font-size:10.5px;color:var(--tx2);line-height:1.6;margin:0 0 12px}
+pre b{color:var(--logic)}
+.stack-x{border:1px solid var(--line);border-radius:8px;background:var(--bg2);padding:0;overflow:hidden;margin:0 0 8px}
+.layer{display:flex;align-items:center;gap:0;border-bottom:1px solid var(--line);font-size:11px}
+.layer:last-child{border-bottom:none}
+.layer .nm{flex:0 0 250px;padding:7px 12px;color:var(--tx);font-weight:600;font-size:10.5px}
+.layer .th{flex:0 0 96px;padding:7px 8px;color:var(--tx3);font-size:10px;text-align:right;font-variant-numeric:tabular-nums}
+.layer .bar{flex:1;padding:7px 12px;color:var(--tx2);font-size:10.5px;border-left:1px solid var(--line)}
+.layer.hi{background:var(--sram-bg)}
+.layer.si{background:#7c8aa814}
+.layer.pcbL{background:#1f6b3a14}
+.layer.metal{background:var(--phy-bg)}
+.big{font-size:20px;color:var(--tx);font-weight:600}
+.dim{color:var(--tx3)}
+@media print{nav{position:static}}
+</style>
+</head>
+<body>
+
+<header class="top"><div class="wrap">
+  <h1>Physical floorplan — where every component actually sits, on and off the chip</h1>
+  <div class="sub">
+    A top-down and cross-sectional view of the real hardware: the PCIe slot, the L4 card's PCB (both sides),
+    the AD104 package, the die floorplan, one GPC, one SM, one sub-partition, and the EPYC SP3 package.
+    Drawn to scale with real dimensions. Companion to the logical/hierarchical view in
+    <a href="MACHINE_ARCHITECTURE.html">MACHINE_ARCHITECTURE.html</a>.
+  </div>
+  <div class="note warn" style="margin:16px 0 0">
+    <b>Read this before you trust the pictures.</b> Three different kinds of claim are mixed below and each is badged:
+    <span class="tag p">PROBED</span> measured on this machine ·
+    <span class="tag s">SPEC</span> published dimension or datasheet figure ·
+    <span class="tag r">REPRESENTATIVE</span> structurally correct but the exact placement is my construction.
+    <br><br>
+    <b>NVIDIA does not publish die floorplan coordinates for AD104.</b> So §5–§8 are
+    <span class="tag r">REPRESENTATIVE</span>: the block <i>inventory</i>, <i>counts</i>, and <i>adjacency
+    constraints</i> are real (I/O PHYs must sit on the die edge, L2 must sit between the GPCs and the memory
+    controllers, SMs are physically paired into TPCs), and the area proportions are estimated from published
+    die size and SRAM density. But if you overlay this on an actual AD104 die photograph, individual blocks
+    will not line up. Treat it as a floorplan schematic, not a die shot.
+  </div>
+</div></header>
+
+<nav><div class="inner">
+  <a href="#s1">1 · Slot &amp; board</a>
+  <a href="#s2">2 · Cross-section</a>
+  <a href="#s3">3 · Card, front</a>
+  <a href="#s4">4 · Card, back</a>
+  <a href="#s5">5 · Package</a>
+  <a href="#s6">6 · AD104 die</a>
+  <a href="#s7">7 · GPC</a>
+  <a href="#s8">8 · SM</a>
+  <a href="#s9">9 · Sub-partition</a>
+  <a href="#s10">10 · Metal stack</a>
+  <a href="#s11">11 · EPYC package</a>
+  <a href="#s12">12 · Distance vs. latency</a>
+  <a href="#s13">13 · Distance vs. energy</a>
+  <a href="#s14">14 · Provenance</a>
+</div></nav>
+
+<div class="wrap">
+
+<div class="legend">
+  <div class="it"><span class="px tx-sram" style="border-color:var(--sram);background-color:var(--sram-bg)"></span>SRAM array — fine regular grid</div>
+  <div class="it"><span class="px tx-lane" style="border-color:var(--logic);background-color:var(--logic-bg)"></span>Datapath lane array — vertical stripes</div>
+  <div class="it"><span class="px tx-mac" style="border-color:var(--fixed);background-color:var(--fixed-bg)"></span>Systolic MAC array — dense mesh</div>
+  <div class="it"><span class="px tx-logic" style="border-color:var(--logic);background-color:var(--logic-bg)"></span>Random logic / standard cells — speckle</div>
+  <div class="it"><span class="px tx-phy" style="border-color:var(--phy);background-color:var(--phy-bg)"></span>I/O PHY — coarse horizontal bands</div>
+  <div class="it"><span class="px tx-off" style="border-color:var(--off);background-color:#5a647812"></span>Fused off / disabled</div>
+  <div class="it"><span class="px tx-ball" style="border-color:var(--tx3);background-color:#ffffff08"></span>Solder ball / bump field</div>
+</div>
+<p class="dim" style="font-size:11px;margin-top:-14px">Textures are not decoration — they are what actually
+distinguishes these blocks in a delidded die photograph. SRAM is the most recognisable feature on any die:
+perfectly periodic, much denser than logic. Lane arrays repeat once per lane. Random logic looks like noise.</p>
+
+<!-- ═══════════════════════════════════════════════════ 1 -->
+<section id="s1">
+<h2><span class="num">§1</span> Where the card physically sits relative to the CPU</h2>
+<div class="lede">Start at human scale. The two dies that matter are roughly <b>25–30 cm of copper apart</b>,
+and the probe found <b>two retimer chips</b> in between — physical evidence that the trace is long enough
+to need signal regeneration.</div>
+
+<div class="fpwrap">
+  <div class="cap"><b>Server board, top view</b> — approx. 2U layout. Scale bar in cm. <span class="tag r">REPRESENTATIVE</span> (AWS does not publish board layouts; the guest cannot see slot geometry)</div>
+  <div class="fp pcb" style="aspect-ratio:42/33">
+    <!-- CPU socket -->
+    <div class="b host tx-ball" style="left:6%;top:26%;width:22%;height:38%" title="AMD EPYC 7R13 in Socket SP3 / LGA-4094">
+      <span class="l">SOCKET SP3 · EPYC 7R13</span><span class="s">58.5 × 75.4 mm package<br>4094 land grid array<br>8 CCD + 1 IOD inside — §11</span>
+    </div>
+    <!-- DIMM slots left -->
+    <div class="b vram" style="left:1.5%;top:6%;width:3.2%;height:88%"><span class="l" style="writing-mode:vertical-rl">DDR4 DIMM</span></div>
+    <!-- DIMM slots right of socket -->
+    <div class="b vram" style="left:30%;top:6%;width:2.6%;height:88%"><span class="l" style="writing-mode:vertical-rl">DIMM</span></div>
+    <div class="b vram" style="left:33.4%;top:6%;width:2.6%;height:88%"><span class="l" style="writing-mode:vertical-rl">DIMM</span></div>
+    <div class="b vram" style="left:36.8%;top:6%;width:2.6%;height:88%"><span class="l" style="writing-mode:vertical-rl">DIMM</span></div>
+    <div class="b vram" style="left:40.2%;top:6%;width:2.6%;height:88%"><span class="l" style="writing-mode:vertical-rl">DIMM</span></div>
+    <!-- retimers -->
+    <div class="b phy tx-logic" style="left:47%;top:34%;width:5.5%;height:9%" title="PCIe retimer — probed: LnkCap2 reports 2Retimers+"><span class="l">RETIMER</span></div>
+    <div class="b phy tx-logic" style="left:47%;top:47%;width:5.5%;height:9%"><span class="l">RETIMER</span></div>
+    <!-- PCIe slot + card -->
+    <div class="b ghost" style="left:56%;top:20%;width:41%;height:11%"><span class="l">PCIe ×16 slot (empty)</span></div>
+    <div class="b logic" style="left:56%;top:36%;width:41%;height:15%" title="This is our L4"><span class="l">PCIe ×16 SLOT — NVIDIA L4 INSTALLED</span><span class="s">only 8 lanes wired to the root complex on this platform · probed: LnkSta Width x8 (downgraded)</span></div>
+    <div class="b ghost" style="left:56%;top:56%;width:41%;height:11%"><span class="l">PCIe ×16 slot (empty)</span></div>
+    <!-- other endpoints -->
+    <div class="b fixed tx-logic" style="left:56%;top:73%;width:12%;height:12%"><span class="l">NVMe SSD</span><span class="s">bus 2f:00.0</span></div>
+    <div class="b fixed tx-logic" style="left:70%;top:73%;width:12%;height:12%"><span class="l">ENA NIC ×2</span><span class="s">bus 27/28:00.0</span></div>
+    <div class="b pwr" style="left:84%;top:73%;width:13%;height:12%"><span class="l">VRM / PSU feed</span></div>
+    <div class="edgelbl" style="left:6%;top:2%">airflow →</div>
+  </div>
+  <div class="ruler">
+    <div class="tick" style="left:0%"></div><div class="lab" style="left:0%">0</div>
+    <div class="tick" style="left:23.8%"></div><div class="lab" style="left:23.8%">10 cm</div>
+    <div class="tick" style="left:47.6%"></div><div class="lab" style="left:47.6%">20 cm</div>
+    <div class="tick" style="left:71.4%"></div><div class="lab" style="left:71.4%">30 cm</div>
+    <div class="tick" style="left:95.2%"></div><div class="lab" style="left:95.2%">40 cm</div>
+  </div>
+</div>
+
+<div class="note"><b>The one thing here that is hard evidence, not inference.</b>
+<code>lspci -vv</code> on the GPU reports <code>LnkCap2: … Retimer+ 2Retimers+</code>
+<span class="tag p">PROBED</span>. Retimers are full re-clocking repeaters — you only fit them when the
+channel is too lossy for a direct trace. Their presence tells you the die-to-die copper path is long
+(tens of cm), and each one adds latency of its own on top of flight time.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 2 -->
+<section id="s2">
+<h2><span class="num">§2</span> Vertical cross-section — the stack from heatsink fin down to motherboard</h2>
+<div class="lede">This is the view that explains flip-chip: <b>the transistors are on the bottom face of the
+die, pointing down at the substrate.</b> Heat has to travel up through the entire thickness of the silicon
+to reach the heatsink, and signals have to travel down through 15+ metal layers to reach a solder bump.</div>
+
+<div class="stack-x">
+  <div class="layer" style="background:var(--bg3)"><div class="nm" style="color:var(--tx3);font-size:9.5px">LAYER</div><div class="th" style="font-size:9.5px">THICKNESS</div><div class="bar" style="color:var(--tx3);font-size:9.5px">WHAT IT IS / WHY IT MATTERS</div></div>
+  <div class="layer"><div class="nm">Aluminium heatsink fins</div><div class="th">~15 mm</div><div class="bar">Passive. No fan on an L4 — cooled entirely by chassis airflow. This is the whole reason the board is capped at 72 W. <span class="tag s">SPEC</span></div></div>
+  <div class="layer"><div class="nm">Heatsink base / vapour chamber</div><div class="th">~3 mm</div><div class="bar">Spreads heat off the ~19 × 16 mm die footprint to the ~169 × 69 mm fin area</div></div>
+  <div class="layer"><div class="nm">Thermal interface material (TIM)</div><div class="th">~0.05 mm</div><div class="bar">The single largest thermal resistance in the stack. Degrades over years → the card throttles earlier as it ages</div></div>
+  <div class="layer si"><div class="nm">Silicon die — <b>backside (bulk)</b></div><div class="th">~0.75 mm</div><div class="bar">Plain, inactive silicon. Thinned after fabrication. <b>This is the face the heatsink touches</b>, and heat from the transistors must cross all of it</div></div>
+  <div class="layer si hi"><div class="nm">↳ <b>Active transistor layer</b></div><div class="th">~0.0001 mm</div><div class="bar"><b>Every transistor on the GPU lives in this one sub-micron sheet</b> — all 35.8 billion of them. Everything in §6–§9 is a 2D map of <i>this</i> plane. <span class="tag s">SPEC</span></div></div>
+  <div class="layer metal"><div class="nm">↳ Metal interconnect, M1 → M15+</div><div class="th">~0.01 mm</div><div class="bar">Local wiring at the bottom (nm pitch), thick global power/clock rails at the top. Detail in §10</div></div>
+  <div class="layer metal"><div class="nm">↳ C4 microbumps</div><div class="th">~0.05 mm</div><div class="bar">Tens of thousands of solder microbumps connecting the metal stack to the package substrate</div></div>
+  <div class="layer"><div class="nm">Package substrate (organic)</div><div class="th">~1.2 mm</div><div class="bar">Multi-layer laminate. Fans the fine bump pitch out to the coarse BGA ball pitch, and carries the GDDR6 and PCIe traces</div></div>
+  <div class="layer"><div class="nm">BGA solder balls</div><div class="th">~0.4 mm</div><div class="bar">Package → card PCB. Thousands of balls: signal, power, ground</div></div>
+  <div class="layer pcbL"><div class="nm">Card PCB</div><div class="th">~1.6 mm</div><div class="bar">~10–12 copper layers. Carries the 192 GDDR6 data lines out to 12 memory packages and 16 PCIe lanes down to the gold fingers</div></div>
+  <div class="layer"><div class="nm">Backside GDDR6 packages</div><div class="th">~1.1 mm</div><div class="bar"><b>6 of the 12 memory chips are mounted here, on the underside</b> — clamshell. See §4</div></div>
+  <div class="layer"><div class="nm">Gold fingers → slot contacts</div><div class="th">—</div><div class="bar">The mechanical/electrical boundary between card and motherboard</div></div>
+  <div class="layer pcbL"><div class="nm">Motherboard PCB</div><div class="th">~2.4 mm</div><div class="bar">Routes the 8 wired lanes through 2 retimers to the EPYC package</div></div>
+</div>
+
+<div class="note ok"><b>Consequence you can feel.</b> The transistors face away from the heatsink, so the
+thermal path is: transistor → 0.75 mm of silicon → TIM → base → fins → air. On a passive 72 W card in a
+shared chassis, the airflow the neighbouring hardware leaves you determines your sustained clock. This is
+why <code>nvidia-smi -q -d PERFORMANCE</code> throttle reasons matter more on an L4 than on a 300 W card
+with its own fans.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 3 -->
+<section id="s3">
+<h2><span class="num">§3</span> The L4 card, front side, to scale</h2>
+<div class="lede">169 mm × 68.9 mm, single-slot, low-profile <span class="tag s">SPEC</span>. Six of the twelve
+GDDR6 packages are on this face, wrapped around three sides of the GPU package so that every one of them is
+roughly the same trace length from its memory PHY.</div>
+
+<div class="fpwrap">
+  <div class="cap"><b>NVIDIA L4 — component side.</b> Card outline and connector position to scale; component placement <span class="tag r">REPRESENTATIVE</span></div>
+  <div class="fp pcb" style="aspect-ratio:169/68.9">
+    <!-- bracket -->
+    <div class="b ghost" style="left:0%;top:0%;width:3%;height:100%"><span class="l" style="writing-mode:vertical-rl;font-size:8px">I/O BRACKET — NO CONNECTORS</span></div>
+    <!-- GPU package -->
+    <div class="b logic tx-logic" style="left:40%;top:19%;width:22%;height:56%" title="AD104 in a flip-chip BGA package">
+      <span class="l">AD104 PACKAGE</span><span class="s">~37.5 × 37.5 mm BGA<br>die inside: 18.6 × 15.8 mm<br>§5 · §6</span>
+    </div>
+    <!-- GDDR6 front: 2 above, 2 left, 2 right -->
+    <div class="b vram tx-ball" style="left:41%;top:3%;width:9%;height:14%"><span class="l">GDDR6 #0</span><span class="s">16 Gb · 2 GB</span></div>
+    <div class="b vram tx-ball" style="left:52%;top:3%;width:9%;height:14%"><span class="l">GDDR6 #1</span><span class="s">16 Gb · 2 GB</span></div>
+    <div class="b vram tx-ball" style="left:28%;top:22%;width:9%;height:22%"><span class="l">GDDR6 #2</span><span class="s">2 GB</span></div>
+    <div class="b vram tx-ball" style="left:28%;top:48%;width:9%;height:22%"><span class="l">GDDR6 #3</span><span class="s">2 GB</span></div>
+    <div class="b vram tx-ball" style="left:65%;top:22%;width:9%;height:22%"><span class="l">GDDR6 #4</span><span class="s">2 GB</span></div>
+    <div class="b vram tx-ball" style="left:65%;top:48%;width:9%;height:22%"><span class="l">GDDR6 #5</span><span class="s">2 GB</span></div>
+    <!-- power -->
+    <div class="b pwr" style="left:78%;top:5%;width:19%;height:30%"><span class="l">VRM — GPU CORE</span><span class="s">multi-phase buck: MOSFETs, inductors, bulk caps</span></div>
+    <div class="b pwr" style="left:78%;top:38%;width:19%;height:20%"><span class="l">VRM — MEMORY / VDDQ</span></div>
+    <div class="b pwr" style="left:78%;top:61%;width:9%;height:16%"><span class="l">PWM ctrl</span></div>
+    <div class="b fixed" style="left:88.5%;top:61%;width:8.5%;height:16%"><span class="l">VBIOS</span><span class="s">SPI ROM</span></div>
+    <div class="b ghost" style="left:78%;top:80%;width:19%;height:14%"><span class="l" style="font-size:8.5px">NO POWER CONNECTOR — 100% slot-powered</span></div>
+    <!-- gold fingers -->
+    <div class="b phy" style="left:20%;top:88%;width:52%;height:11%"><span class="l">PCIe ×16 EDGE CONNECTOR (gold fingers)</span><span class="s">×16 mechanical · ×8 electrically wired on this host <span style="color:#ff6b8a">PROBED</span></span></div>
+    <!-- heatsink outline -->
+    <div class="b ghost" style="left:4%;top:1%;width:73%;height:85%;background:transparent;border-color:#ffffff18;pointer-events:none"><span class="l" style="position:absolute;top:2px;left:4px;font-size:8px;color:#ffffff40">PASSIVE HEATSINK FOOTPRINT</span></div>
+    <div class="edgelbl" style="left:4.5%;bottom:1%">bracket end</div>
+  </div>
+  <div class="ruler">
+    <div class="tick" style="left:0%"></div><div class="lab" style="left:0%">0</div>
+    <div class="tick" style="left:14.8%"></div><div class="lab" style="left:14.8%">25 mm</div>
+    <div class="tick" style="left:29.6%"></div><div class="lab" style="left:29.6%">50</div>
+    <div class="tick" style="left:44.4%"></div><div class="lab" style="left:44.4%">75</div>
+    <div class="tick" style="left:59.2%"></div><div class="lab" style="left:59.2%">100</div>
+    <div class="tick" style="left:74%"></div><div class="lab" style="left:74%">125</div>
+    <div class="tick" style="left:88.8%"></div><div class="lab" style="left:88.8%">150 mm</div>
+  </div>
+</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 4 -->
+<section id="s4">
+<h2><span class="num">§4</span> The L4 card, back side — the clamshell that explains 24 GB</h2>
+<div class="lede">This is the physical fact that most block diagrams hide, and it falls straight out of the
+probe. The bus is <b>192 bits</b>, GDDR6 devices are 32-bit, so there are only <b>6</b> channels. But
+6 channels × the 2 GB maximum density of a 16 Gb GDDR6 device is 12 GB — and the card has 24. The only
+resolution is <b>two packages per channel</b>, one on each face of the PCB, each running in ×16 mode.</div>
+
+<div class="fpwrap">
+  <div class="cap"><b>NVIDIA L4 — solder side</b> (viewed through the board, so it mirrors §3). <span class="tag r">REPRESENTATIVE</span></div>
+  <div class="fp pcb" style="aspect-ratio:169/68.9">
+    <div class="b ghost" style="left:0%;top:0%;width:3%;height:100%"><span class="l" style="writing-mode:vertical-rl;font-size:8px">I/O BRACKET</span></div>
+    <div class="b ghost" style="left:40%;top:19%;width:22%;height:56%"><span class="l">(AD104 package)</span><span class="s">on the opposite face<br>backside here is bare<br>+ decoupling caps</span></div>
+    <!-- mirrored GDDR6 -->
+    <div class="b vram tx-ball" style="left:41%;top:3%;width:9%;height:14%"><span class="l">GDDR6 #6</span><span class="s">pairs with #0</span></div>
+    <div class="b vram tx-ball" style="left:52%;top:3%;width:9%;height:14%"><span class="l">GDDR6 #7</span><span class="s">pairs with #1</span></div>
+    <div class="b vram tx-ball" style="left:28%;top:22%;width:9%;height:22%"><span class="l">GDDR6 #8</span><span class="s">pairs with #2</span></div>
+    <div class="b vram tx-ball" style="left:28%;top:48%;width:9%;height:22%"><span class="l">GDDR6 #9</span><span class="s">pairs with #3</span></div>
+    <div class="b vram tx-ball" style="left:65%;top:22%;width:9%;height:22%"><span class="l">GDDR6 #10</span><span class="s">pairs with #4</span></div>
+    <div class="b vram tx-ball" style="left:65%;top:48%;width:9%;height:22%"><span class="l">GDDR6 #11</span><span class="s">pairs with #5</span></div>
+    <div class="b ghost" style="left:78%;top:5%;width:19%;height:53%"><span class="l">bulk / MLCC caps</span><span class="s">decoupling for the VRM on the far face</span></div>
+    <div class="b phy" style="left:20%;top:88%;width:52%;height:11%"><span class="l">PCIe ×16 EDGE CONNECTOR — side B</span></div>
+  </div>
+</div>
+
+<h3>How one 32-bit channel is physically wired</h3>
+<pre>Die edge PHY                PCB                          Packages
+────────────────────────────────────────────────────────────────────────────────
+                        ┌──── ~20 mm trace, top layer ────► GDDR6 #2  (front face)
+  MC2 PHY  ═══32 bit═══─┤                                    ├─ DQ[15:0]  (×16 mode)
+  (on die edge, §6)     └──── via down, ~22 mm, bottom ─────► GDDR6 #8  (back face)
+                                                             └─ DQ[31:16] (×16 mode)
+
+  · both packages share the same address/command bus from the PHY
+  · each drives half the 32 data lines → each runs in ×16 instead of ×32
+  · 6 channels × 2 packages × 2 GB = <b>24 GB</b>  ✓ matches the probed 23,661,248,512 B (post-ECC)
+  · 6 channels × 32 bit        = <b>192 bit</b> ✓ matches the probed memoryBusWidth = 192
+  · trace lengths are matched front-vs-back to within a fraction of a bit period at 12.5 Gbps</pre>
+
+<div class="note ok"><b>Why NVIDIA did this.</b> Clamshell is how you get datacenter capacity onto a
+single-slot, low-profile, 72 W card. The cost is that it buys capacity but <b>not bandwidth</b> — you still
+have only 6 channels and 192 bits, so 24 GB sits behind the same 300 GB/s. That ratio (<b>12.5 GB of
+capacity per 100 GB/s of bandwidth</b>) is unusually high, and it is exactly why the L4 pairs so well with
+inference on large models but poorly with bandwidth-bound HPC sweeps over all of memory.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 5 -->
+<section id="s5">
+<h2><span class="num">§5</span> Inside the AD104 package</h2>
+<div class="lede">The die is much smaller than the package. Most of the package is fan-out: translating a
+dense field of microbumps under the die into a coarse ball grid the PCB can actually route.</div>
+
+<div class="fpwrap">
+  <div class="cap"><b>AD104 flip-chip BGA package, top view, lid removed.</b> Die size <span class="tag s">SPEC</span> · package size and ball field <span class="tag r">REPRESENTATIVE</span></div>
+  <div class="fp pkg" style="aspect-ratio:1/1">
+    <div class="b ghost tx-ball" style="left:2%;top:2%;width:96%;height:96%;pointer-events:none">
+      <span class="l" style="position:absolute;top:5px;left:8px;font-size:9px">PACKAGE SUBSTRATE ~37.5 × 37.5 mm — BGA ball field beneath</span>
+    </div>
+    <div class="b logic" style="left:24%;top:28%;width:52%;height:44%" title="AD104 die: 294.5 mm²">
+      <span class="l" style="font-size:11px">AD104 DIE</span>
+      <span class="s" style="font-size:9px">18.6 × 15.8 mm = 294.5 mm²<br>35.8 billion transistors<br>TSMC 4N<br><br>floorplan → §6</span>
+    </div>
+    <div class="edgelbl" style="left:26%;top:20%">← 18.6 mm →</div>
+    <div class="edgelbl" style="left:78%;top:46%;writing-mode:vertical-rl">15.8 mm</div>
+    <div class="b ghost" style="left:4%;top:76%;width:44%;height:9%"><span class="l" style="font-size:8.5px">GDDR6 ball-out region (192 DQ + CA)</span></div>
+    <div class="b ghost" style="left:52%;top:76%;width:44%;height:9%"><span class="l" style="font-size:8.5px">PCIe ball-out (16 lanes diff. pairs)</span></div>
+    <div class="b ghost" style="left:4%;top:88%;width:92%;height:8%"><span class="l" style="font-size:8.5px">power / ground balls — the majority of the ~2000+ ball count</span></div>
+  </div>
+</div>
+
+<div class="scroll"><table>
+<thead><tr><th>Quantity</th><th class="n">Value</th><th>Source</th></tr></thead>
+<tbody>
+<tr><td class="k">Die area</td><td class="n">294.5 mm²</td><td>AD104 published die size <span class="tag s">SPEC</span></td></tr>
+<tr><td class="k">Die dimensions</td><td class="n">~18.6 × 15.8 mm</td><td>Consistent with 294.5 mm²; exact aspect not officially stated <span class="tag r">REPR</span></td></tr>
+<tr><td class="k">Transistors</td><td class="n">35.8 × 10⁹</td><td>NVIDIA Ada whitepaper <span class="tag s">SPEC</span></td></tr>
+<tr><td class="k">Transistor density</td><td class="n">~122 M / mm²</td><td>35.8e9 ÷ 294.5 — derived</td></tr>
+<tr><td class="k">Process</td><td class="n">TSMC 4N</td><td>NVIDIA-custom 5 nm-class node <span class="tag s">SPEC</span></td></tr>
+<tr><td class="k">Area per SM</td><td class="n">~2.9 mm²</td><td>If GPCs occupy ~60% of the die: 294.5 × 0.6 ÷ 60 SM. So an SM is roughly <b>1.7 mm on a side</b> <span class="tag r">REPR</span></td></tr>
+</tbody></table></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 6 -->
+<section id="s6">
+<h2><span class="num">§6</span> The AD104 die floorplan</h2>
+<div class="lede">The centrepiece. Three placement rules are physics, not preference, and they determine
+almost the whole layout: <b>(1)</b> anything that drives an off-die signal must sit on the die edge, because
+that is where the bump field can reach a package trace; <b>(2)</b> the L2 must sit between the GPCs and the
+memory controllers, because it is on the path from one to the other; <b>(3)</b> SMs come in physically
+adjacent pairs, because a TPC is a pair.</div>
+
+<div class="fpwrap">
+  <div class="cap"><b>AD104, active layer, top-down.</b> To scale at 18.6 × 15.8 mm. Block inventory and counts <span class="tag p">PROBED</span>/<span class="tag s">SPEC</span> · <b>placement <span class="tag r">REPRESENTATIVE</span></b></div>
+  <div class="fp" style="aspect-ratio:18.6/15.8;min-width:820px">
+
+    <!-- LEFT EDGE: memory PHYs + GSP -->
+    <div class="b phy tx-phy" style="left:0.5%;top:4%;width:7.5%;height:27%"><span class="l" style="writing-mode:vertical-rl;font-size:9px">GDDR6 PHY · MC0</span><span class="s" style="writing-mode:vertical-rl">32-bit</span></div>
+    <div class="b phy tx-phy" style="left:0.5%;top:32.5%;width:7.5%;height:27%"><span class="l" style="writing-mode:vertical-rl;font-size:9px">GDDR6 PHY · MC1</span><span class="s" style="writing-mode:vertical-rl">32-bit</span></div>
+    <div class="b fixed tx-logic" style="left:0.5%;top:61%;width:7.5%;height:26%"><span class="l" style="writing-mode:vertical-rl;font-size:8.5px">GSP + Falcon MCUs</span></div>
+
+    <!-- RIGHT EDGE -->
+    <div class="b phy tx-phy" style="left:92%;top:4%;width:7.5%;height:27%"><span class="l" style="writing-mode:vertical-rl;font-size:9px">GDDR6 PHY · MC2</span><span class="s" style="writing-mode:vertical-rl">32-bit</span></div>
+    <div class="b phy tx-phy" style="left:92%;top:32.5%;width:7.5%;height:27%"><span class="l" style="writing-mode:vertical-rl;font-size:9px">GDDR6 PHY · MC3</span><span class="s" style="writing-mode:vertical-rl">32-bit</span></div>
+    <div class="b pwr tx-logic" style="left:92%;top:61%;width:7.5%;height:26%"><span class="l" style="writing-mode:vertical-rl;font-size:8.5px">PMU · DVFS · fuses</span></div>
+
+    <!-- TOP BAND: front end -->
+    <div class="b logic tx-logic" style="left:9%;top:1.5%;width:82%;height:7%"><span class="l">GIGATHREAD ENGINE · FRONT END · COMPUTE WORK DISTRIBUTOR · 2 × COPY ENGINE</span></div>
+
+    <!-- GPC ROW 1 -->
+    <div class="b logic tx-logic" style="left:9%;top:10%;width:26.5%;height:33%"><span class="l">GPC 0</span><span class="s">1 Raster Engine · 6 TPC = 12 SM · 16 ROP<br>→ §7</span></div>
+    <div class="b logic tx-logic" style="left:36.8%;top:10%;width:26.5%;height:33%"><span class="l">GPC 1</span><span class="s">1 Raster Engine · 6 TPC = 12 SM · 16 ROP</span></div>
+    <div class="b logic tx-logic" style="left:64.5%;top:10%;width:26.5%;height:33%"><span class="l">GPC 2</span><span class="s">1 Raster Engine · 6 TPC = 12 SM · 16 ROP</span></div>
+
+    <!-- CENTRAL SPINE: L2 + XBAR -->
+    <div class="b sram tx-sram" style="left:9%;top:44.5%;width:13.3%;height:12%"><span class="l" style="font-size:9px">L2 · 8 MB</span><span class="s">part. 0</span></div>
+    <div class="b sram tx-sram" style="left:22.9%;top:44.5%;width:13.3%;height:12%"><span class="l" style="font-size:9px">L2 · 8 MB</span><span class="s">part. 1</span></div>
+    <div class="b sram tx-sram" style="left:36.8%;top:44.5%;width:13.3%;height:12%"><span class="l" style="font-size:9px">L2 · 8 MB</span><span class="s">part. 2</span></div>
+    <div class="b sram tx-sram" style="left:50.7%;top:44.5%;width:13.3%;height:12%"><span class="l" style="font-size:9px">L2 · 8 MB</span><span class="s">part. 3</span></div>
+    <div class="b sram tx-sram" style="left:64.6%;top:44.5%;width:13.3%;height:12%"><span class="l" style="font-size:9px">L2 · 8 MB</span><span class="s">part. 4</span></div>
+    <div class="b sram tx-sram" style="left:78.5%;top:44.5%;width:12.5%;height:12%"><span class="l" style="font-size:9px">L2 · 8 MB</span><span class="s">part. 5</span></div>
+    <div class="b logic tx-logic" style="left:9%;top:57.5%;width:82%;height:5%"><span class="l" style="font-size:9px">CROSSBAR (XBAR) — every SM to every L2 partition · GPU MMU hub + TLB</span></div>
+
+    <!-- GPC ROW 2 -->
+    <div class="b logic tx-logic" style="left:9%;top:63.5%;width:26.5%;height:24%"><span class="l">GPC 3</span><span class="s">6 TPC = 12 SM</span></div>
+    <div class="b logic tx-logic" style="left:36.8%;top:63.5%;width:26.5%;height:24%">
+      <span class="l">GPC 4</span><span class="s">5 TPC = 10 SM enabled</span>
+      <div class="b off tx-off" style="left:60%;bottom:6%;width:36%;height:26%"><span class="l" style="font-size:7.5px">TPC FUSED OFF</span></div>
+    </div>
+    <!-- media block -->
+    <div class="b fixed tx-logic" style="left:64.5%;top:63.5%;width:26.5%;height:24%">
+      <span class="l">MEDIA / VIDEO COMPLEX</span>
+      <span class="s">2 × NVENC (7th gen, AV1)<br>4 × NVDEC (5th gen)<br>4 × NVJPEG · 1 × OFA</span>
+    </div>
+
+    <!-- BOTTOM EDGE -->
+    <div class="b phy tx-phy" style="left:9%;top:88.5%;width:18%;height:10%"><span class="l" style="font-size:9px">GDDR6 PHY · MC4</span></div>
+    <div class="b phy tx-phy" style="left:28%;top:88.5%;width:27%;height:10%"><span class="l" style="font-size:9px">PCIe GEN4 ×16 PHY + HOST INTERFACE</span><span class="s">only 8 lanes trained here</span></div>
+    <div class="b fixed tx-logic" style="left:56%;top:88.5%;width:16%;height:10%"><span class="l" style="font-size:8.5px">DISPLAY ENGINE</span><span class="s">no board connectors</span></div>
+    <div class="b phy tx-phy" style="left:73%;top:88.5%;width:18%;height:10%"><span class="l" style="font-size:9px">GDDR6 PHY · MC5</span></div>
+
+    <div class="edgelbl" style="left:0.5%;bottom:0.5%;color:#7c8aa8">SEAL RING / SCRIBE LINE</div>
+  </div>
+  <div class="ruler">
+    <div class="tick" style="left:0%"></div><div class="lab" style="left:0%">0</div>
+    <div class="tick" style="left:26.9%"></div><div class="lab" style="left:26.9%">5 mm</div>
+    <div class="tick" style="left:53.8%"></div><div class="lab" style="left:53.8%">10 mm</div>
+    <div class="tick" style="left:80.6%"></div><div class="lab" style="left:80.6%">15 mm</div>
+  </div>
+</div>
+
+<h3>Why each block is where it is</h3>
+<div class="scroll"><table>
+<thead><tr><th>Block</th><th>Position</th><th>Physical reason it must be there</th></tr></thead>
+<tbody>
+<tr><td class="k">6 × GDDR6 PHY</td><td>Left, right and bottom <b>edges</b></td><td><b>Hard constraint.</b> Each drives 32 data lines at 12.5 Gbps off-die. Those signals need the shortest possible path to the bump field and out to the package trace. A PHY in the die interior would need its high-speed signals routed across the whole chip first. Distributing them across three edges also spreads the heat and keeps trace lengths to the 12 packages matched.</td></tr>
+<tr><td class="k">PCIe Gen4 PHY</td><td>Bottom <b>edge</b>, centre</td><td><b>Hard constraint,</b> same reason — 16 differential pairs at 16 GT/s. Bottom edge because the gold fingers are on the bottom edge of the card, so this is the shortest route to them.</td></tr>
+<tr><td class="k">L2, 6 × 8 MB</td><td><b>Central spine</b>, in a band</td><td><b>Topological constraint.</b> Every SM's miss must reach it and every DRAM access must pass through it. Central placement minimises the worst-case SM→L2 distance. It is split into 6 partitions so that each one sits near the memory controller it fronts, and so 6 lookups proceed in parallel rather than through one contended port.</td></tr>
+<tr><td class="k">Crossbar</td><td>Immediately <b>adjacent</b> to L2</td><td>It is the switch between the GPC ports and the L2 partitions. Every wire it carries is wide (hundreds of bits), so it must be short.</td></tr>
+<tr><td class="k">5 × GPC</td><td>Two rows, <b>flanking</b> the L2 spine</td><td>The GPCs are ~60% of the die area and have no off-die signals of their own, so they take the interior. Two rows either side of the L2 keeps every GPC roughly equidistant from it.</td></tr>
+<tr><td class="k">GigaThread Engine</td><td>Top band, spanning all GPCs</td><td>It must fan block-dispatch wires out to all 58 SMs. A band spanning the GPC row minimises the longest dispatch path.</td></tr>
+<tr><td class="k">Media complex</td><td>Fills the <b>corner</b> left by 5 GPCs</td><td>5 GPCs don't tile a rectangle evenly. The video engines are relatively latency-insensitive and self-contained, so they take the leftover corner — a real pattern on NVIDIA die shots.</td></tr>
+<tr><td class="k">The fused-off TPC</td><td>Somewhere in <b>one</b> GPC</td><td>58 of 60 SMs are enabled <span class="tag p">PROBED</span>, so exactly one TPC is dark. <b>Which</b> one is a per-die yield artifact — it is whichever pair failed test on that particular piece of silicon — and it is not exposed to software. Drawing it in GPC 4 is arbitrary.</td></tr>
+</tbody></table></div>
+
+<h3>Area budget — and how I estimated it</h3>
+<p>The one number I can genuinely derive rather than guess is the L2, because SRAM density is published:</p>
+<pre>L2 capacity                  = 50,331,648 B = 402,653,184 bits          <b>PROBED</b>
+TSMC N5/4N HD SRAM bitcell   ≈ 0.021 µm²/bit                            <b>SPEC</b>
+Pure bitcell area            = 402.65e6 × 0.021 µm²  ≈ <b>8.5 mm²</b>
+× ~3 for tags, sense amps, decoders, ECC, L2 control logic
+                             ≈ <b>25–30 mm²</b>  →  <b>~9% of the 294.5 mm² die</b></pre>
+<p>Everything else in the table below is a proportional estimate, not a measurement. It is shown because
+the <i>relative</i> sizes are what make the floorplan look right — but do not quote these figures.</p>
+<div class="scroll"><table>
+<thead><tr><th>Block</th><th class="n">Est. area</th><th class="n">Est. % of die</th><th>Basis</th></tr></thead>
+<tbody>
+<tr><td class="k">5 × GPC (58 SM + raster + ROP)</td><td class="n">~175 mm²</td><td class="n">~60%</td><td>Residual after the blocks below <span class="tag r">REPR</span></td></tr>
+<tr><td class="k">L2 cache, 48 MB</td><td class="n">~25–30 mm²</td><td class="n">~9%</td><td><b>Derived from probed capacity × published bitcell density</b></td></tr>
+<tr><td class="k">6 × GDDR6 PHY</td><td class="n">~20 mm²</td><td class="n">~7%</td><td>~3–4 mm² per 32-bit GDDR6 PHY <span class="tag r">REPR</span></td></tr>
+<tr><td class="k">Media complex</td><td class="n">~15 mm²</td><td class="n">~5%</td><td>2 NVENC + 4 NVDEC + 4 NVJPEG + OFA <span class="tag r">REPR</span></td></tr>
+<tr><td class="k">PCIe Gen4 ×16 PHY + host IF</td><td class="n">~12 mm²</td><td class="n">~4%</td><td><span class="tag r">REPR</span></td></tr>
+<tr><td class="k">Crossbar + hub MMU</td><td class="n">~10 mm²</td><td class="n">~3%</td><td><span class="tag r">REPR</span></td></tr>
+<tr><td class="k">Display engine</td><td class="n">~8 mm²</td><td class="n">~3%</td><td>Present on the die, unused on this board <span class="tag r">REPR</span></td></tr>
+<tr><td class="k">GigaThread, GSP, PMU, misc</td><td class="n">~10 mm²</td><td class="n">~3%</td><td><span class="tag r">REPR</span></td></tr>
+<tr><td class="k">Seal ring, scribe, spares</td><td class="n">~15 mm²</td><td class="n">~5%</td><td><span class="tag r">REPR</span></td></tr>
+</tbody></table></div>
+
+<div class="note ok"><b>Where the SRAM actually is, spatially.</b> Adding up §6–§9: <b>48 MB of L2</b> in the
+central spine, <b>7.4 MB of L1/shared</b> distributed as 58 separate 128 KB blocks inside the SMs, and
+<b>14.5 MB of register file</b> distributed as 232 separate 64 KB blocks inside the sub-partitions. That is
+~70 MB of SRAM, and only the L2 third of it is in one place. The other two thirds are deliberately
+scattered right next to the lanes that consume them — <span style="color:var(--tx)">which is the whole
+architectural argument for shared memory over cache</span>: it is not faster because it is a different
+technology, it is faster because it is physically closer and needs no tag lookup or coherence.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 7 -->
+<section id="s7">
+<h2><span class="num">§7</span> Inside one GPC — ~5.0 × 5.5 mm</h2>
+<div class="lede">Twelve SMs in six physically-paired TPCs, with the raster engine spanning the top and the
+ROP partitions along the bottom edge nearest the L2 spine.</div>
+
+<div class="fpwrap">
+  <div class="cap"><b>One Graphics Processing Cluster.</b> Counts <span class="tag s">SPEC</span> · placement <span class="tag r">REPRESENTATIVE</span></div>
+  <div class="fp" style="aspect-ratio:5.0/5.5;min-width:520px;max-width:660px">
+    <div class="b logic tx-logic" style="left:2%;top:2%;width:96%;height:8%"><span class="l" style="font-size:9px">RASTER ENGINE — setup, rasterise, Z-cull</span><span class="s" style="font-size:7.5px">idle during CUDA compute</span></div>
+
+    <div class="b logic" style="left:2%;top:11.5%;width:31%;height:37%"><span class="l" style="font-size:9px">TPC 0</span>
+      <div class="b logic tx-lane" style="left:5%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+      <div class="b logic tx-lane" style="left:53%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+    </div>
+    <div class="b logic" style="left:34.5%;top:11.5%;width:31%;height:37%"><span class="l" style="font-size:9px">TPC 1</span>
+      <div class="b logic tx-lane" style="left:5%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+      <div class="b logic tx-lane" style="left:53%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+    </div>
+    <div class="b logic" style="left:67%;top:11.5%;width:31%;height:37%"><span class="l" style="font-size:9px">TPC 2</span>
+      <div class="b logic tx-lane" style="left:5%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+      <div class="b logic tx-lane" style="left:53%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+    </div>
+
+    <div class="b logic" style="left:2%;top:50%;width:31%;height:37%"><span class="l" style="font-size:9px">TPC 3</span>
+      <div class="b logic tx-lane" style="left:5%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+      <div class="b logic tx-lane" style="left:53%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+    </div>
+    <div class="b logic" style="left:34.5%;top:50%;width:31%;height:37%"><span class="l" style="font-size:9px">TPC 4</span>
+      <div class="b logic tx-lane" style="left:5%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+      <div class="b logic tx-lane" style="left:53%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+    </div>
+    <div class="b logic" style="left:67%;top:50%;width:31%;height:37%"><span class="l" style="font-size:9px">TPC 5</span>
+      <div class="b logic tx-lane" style="left:5%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+      <div class="b logic tx-lane" style="left:53%;top:22%;width:42%;height:70%"><span class="l" style="font-size:7.5px">SM</span></div>
+    </div>
+
+    <div class="b fixed tx-logic" style="left:2%;top:89%;width:30%;height:9%"><span class="l" style="font-size:8px">ROP × 8</span></div>
+    <div class="b fixed tx-logic" style="left:34%;top:89%;width:30%;height:9%"><span class="l" style="font-size:8px">ROP × 8</span></div>
+    <div class="b sram tx-sram" style="left:66%;top:89%;width:32%;height:9%"><span class="l" style="font-size:8px">GPC MMU + TLB</span></div>
+    <div class="edgelbl" style="left:2%;bottom:-14px;color:var(--sram)">↓ this edge faces the L2 spine / crossbar</div>
+  </div>
+</div>
+<p><b>Why the ROPs and the GPC MMU are on the bottom edge:</b> both are on the path to memory. Putting them
+on the face of the GPC nearest the central L2 spine shortens the wide data buses that carry pixel writes and
+translated addresses. Everything with off-GPC traffic clusters on the L2-facing edge — a fractal repeat of
+the die-level rule from §6.</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 8 -->
+<section id="s8">
+<h2><span class="num">§8</span> Inside one SM — ~1.7 × 1.7 mm</h2>
+<div class="lede">Four sub-partitions as quadrants, and one big, visually unmistakable 128 KB SRAM block that
+is <b>simultaneously</b> the L1 data cache, the shared memory, and the texture cache. On a die shot this
+block is the easiest thing to find in an SM: it is the only large perfectly-periodic array.</div>
+
+<div class="fpwrap">
+  <div class="cap"><b>One Streaming Multiprocessor, Ada CC 8.9.</b> Unit inventory and counts <span class="tag p">PROBED</span>/<span class="tag s">SPEC</span> · placement <span class="tag r">REPRESENTATIVE</span></div>
+  <div class="fp" style="aspect-ratio:1/1;min-width:560px;max-width:720px">
+    <!-- 4 sub-partitions -->
+    <div class="b logic" style="left:1.5%;top:1.5%;width:48%;height:30%"><span class="l" style="font-size:9px">SUB-PARTITION 0</span><span class="s" style="font-size:7.5px">12 warp slots · 64 KB regs · 32 FP32 · 1 Tensor Core → §9</span></div>
+    <div class="b logic" style="left:50.5%;top:1.5%;width:48%;height:30%"><span class="l" style="font-size:9px">SUB-PARTITION 1</span><span class="s" style="font-size:7.5px">12 warp slots · 64 KB regs · 32 FP32 · 1 Tensor Core</span></div>
+    <div class="b logic" style="left:1.5%;top:32.5%;width:48%;height:30%"><span class="l" style="font-size:9px">SUB-PARTITION 2</span><span class="s" style="font-size:7.5px">12 warp slots · 64 KB regs · 32 FP32 · 1 Tensor Core</span></div>
+    <div class="b logic" style="left:50.5%;top:32.5%;width:48%;height:30%"><span class="l" style="font-size:9px">SUB-PARTITION 3</span><span class="s" style="font-size:7.5px">12 warp slots · 64 KB regs · 32 FP32 · 1 Tensor Core</span></div>
+
+    <!-- MIO band between partitions and SRAM -->
+    <div class="b logic tx-logic" style="left:1.5%;top:63.5%;width:97%;height:6%"><span class="l" style="font-size:8.5px">MIO — request queues, arbitration, address coalescer (32 lane addresses → 32 B sectors)</span></div>
+
+    <!-- the big unified SRAM -->
+    <div class="b sram tx-sram" style="left:1.5%;top:70.5%;width:64%;height:20%">
+      <span class="l" style="font-size:10px">128 KB UNIFIED SRAM BLOCK</span>
+      <span class="s" style="font-size:8px">Shared memory (0/8/16/32/64/<b>100</b> KB carve-out) + L1 data cache (remainder) + texture cache<br>32 banks × 4 B = 128 B/clk · one physical array, three logical roles</span>
+    </div>
+    <div class="b fixed tx-mac" style="left:67%;top:70.5%;width:31.5%;height:20%"><span class="l" style="font-size:9px">RT CORE (3rd gen)</span><span class="s" style="font-size:7.5px">BVH traversal · ray-tri intersect<br>Opacity Micromap engine<br>Displaced Micro-Mesh engine</span></div>
+
+    <!-- bottom band: SM-level shared units -->
+    <div class="b sram tx-sram" style="left:1.5%;top:91.5%;width:15%;height:7%"><span class="l" style="font-size:7.5px">L1 I-cache</span></div>
+    <div class="b sram tx-sram" style="left:17.5%;top:91.5%;width:15%;height:7%"><span class="l" style="font-size:7.5px">Constant $</span></div>
+    <div class="b fixed tx-logic" style="left:33.5%;top:91.5%;width:17%;height:7%"><span class="l" style="font-size:7.5px">4 × Texture unit</span></div>
+    <div class="b logic tx-logic" style="left:51.5%;top:91.5%;width:12%;height:7%"><span class="l" style="font-size:7.5px">2 × FP64</span></div>
+    <div class="b sram tx-sram" style="left:64.5%;top:91.5%;width:11%;height:7%"><span class="l" style="font-size:7.5px">µTLB</span></div>
+    <div class="b logic tx-logic" style="left:76.5%;top:91.5%;width:22%;height:7%"><span class="l" style="font-size:7.5px">Barrier HW · block dispatch</span></div>
+  </div>
+</div>
+
+<div class="note"><b>Two placements here carry real meaning.</b>
+<br><br>
+<b>1 · The 128 KB SRAM is one array, not three.</b> Shared memory, L1 data cache and texture cache are not
+separate structures that happen to be nearby — they are <i>the same silicon</i>, partitioned by a
+configuration register. That is why the carve-out is a zero-sum choice: asking for 100 KB of shared memory
+leaves 28 KB of L1, because you are dividing one physical block. <span class="tag p">PROBED</span>
+<code>sharedMemPerMultiprocessor = 102400</code> out of a 128 KB block.
+<br><br>
+<b>2 · FP64 sits at SM level, in a tiny box.</b> Two units for the entire SM, versus 128 FP32 lanes.
+The area on this floorplan is honest — FP64 is a rounding error on an Ada die, which is exactly what
+&ldquo;1/64 rate&rdquo; looks like when you draw it to scale.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 9 -->
+<section id="s9">
+<h2><span class="num">§9</span> Inside one sub-partition — ~0.85 × 0.5 mm</h2>
+<div class="lede">The deepest zoom. At this level the register file dominates, the 32 FP32 lanes appear as a
+literal repeating stripe pattern, and the tensor core is startlingly large next to them — a picture of where
+Ada's transistor budget actually went.</div>
+
+<div class="fpwrap">
+  <div class="cap"><b>One SM sub-partition (processing block).</b> Unit counts <span class="tag p">PROBED</span>/<span class="tag s">SPEC</span> · placement and relative area <span class="tag r">REPRESENTATIVE</span></div>
+  <div class="fp" style="aspect-ratio:1.7/1;min-width:700px">
+    <!-- register file -->
+    <div class="b sram tx-sram" style="left:1%;top:2%;width:20%;height:96%">
+      <span class="l" style="font-size:9.5px">REGISTER FILE</span>
+      <span class="s" style="font-size:8px">16,384 × 32-bit<br>= <b>64 KB</b><br><br>multi-ported<br>(3 read + 1 write<br>per lane per clock)<br><br>the largest single<br>consumer of area<br>in the sub-partition</span>
+    </div>
+    <!-- tensor core -->
+    <div class="b fixed tx-mac" style="left:22%;top:2%;width:22%;height:56%">
+      <span class="l" style="font-size:9.5px">TENSOR CORE</span>
+      <span class="s" style="font-size:8px">4th gen · systolic MAC array<br>FP16 · BF16 · TF32<br>FP8 (E4M3/E5M2)<br>INT8 · INT4<br>2:4 structured sparsity</span>
+    </div>
+    <!-- int32 -->
+    <div class="b logic tx-lane" style="left:45%;top:2%;width:26%;height:26%"><span class="l" style="font-size:8.5px">16 × INT32 ALU</span><span class="s" style="font-size:7.5px">half-rate · shares silicon with 16 of the FP32 lanes</span></div>
+    <!-- SFU -->
+    <div class="b logic tx-logic" style="left:72%;top:2%;width:12%;height:26%"><span class="l" style="font-size:8px">4 × SFU</span><span class="s" style="font-size:7px">rcp rsqrt<br>sin cos ex2</span></div>
+    <!-- L0 icache -->
+    <div class="b sram tx-sram" style="left:85%;top:2%;width:14%;height:26%"><span class="l" style="font-size:8px">L0 I-CACHE</span></div>
+    <!-- LD/ST -->
+    <div class="b logic tx-logic" style="left:45%;top:30%;width:20%;height:28%"><span class="l" style="font-size:8.5px">4 × LD/ST</span><span class="s" style="font-size:7.5px">→ MIO → L1</span></div>
+    <!-- URF -->
+    <div class="b sram tx-sram" style="left:66%;top:30%;width:18%;height:28%"><span class="l" style="font-size:8px">UNIFORM REG FILE</span><span class="s" style="font-size:7px">64 UR / warp<br>scalar datapath</span></div>
+    <div class="b logic tx-logic" style="left:85%;top:30%;width:14%;height:28%"><span class="l" style="font-size:8px">UDP</span><span class="s" style="font-size:7px">uniform<br>ALU</span></div>
+    <!-- FP32 lane array — the money shot -->
+    <div class="b logic tx-lane" style="left:22%;top:60%;width:77%;height:20%">
+      <span class="l" style="font-size:9px">32 × FP32 LANE ARRAY — &ldquo;CUDA cores&rdquo;</span>
+      <span class="s" style="font-size:7.5px">16 FP32-only + 16 FP32/INT32 shared · one warp issued across all 32 lanes per clock</span>
+    </div>
+    <!-- control -->
+    <div class="b logic tx-logic" style="left:22%;top:81%;width:38%;height:17%"><span class="l" style="font-size:8.5px">WARP SCHEDULER — 12 warp slots</span><span class="s" style="font-size:7.5px">scoreboard · eligibility · 1 pick/clk</span></div>
+    <div class="b logic tx-logic" style="left:61%;top:81%;width:20%;height:17%"><span class="l" style="font-size:8px">DISPATCH</span><span class="s" style="font-size:7px">32 lanes/clk</span></div>
+    <div class="b logic tx-logic" style="left:82%;top:81%;width:17%;height:17%"><span class="l" style="font-size:8px">CONVERGENCE<br>BARRIER UNIT</span></div>
+  </div>
+</div>
+
+<div class="note ok"><b>What the areas tell you that the spec sheet doesn't.</b>
+<br>· The <b>register file is the biggest block</b> — bigger than the entire FP32 lane array it feeds. Registers
+are multi-ported SRAM, and ports cost area quadratically. This is the physical reason register pressure is a
+real constraint: 65,536 registers per SM is not an arbitrary limit, it is what fits.
+<br>· The <b>tensor core rivals the register file</b> for area while the 32 FP32 lanes are a thin strip.
+Drawn to scale, this <i>is</i> the story of the last three GPU generations.
+<br>· The <b>warp scheduler is small</b>, and there is no reorder buffer, no branch predictor, no
+register renaming anywhere on this floorplan. All that area went into lanes and SRAM instead. That is the
+bargain: the GPU spends nothing on extracting instruction-level parallelism, and in exchange <i>you</i> must
+supply thread-level parallelism — 12 warps per scheduler — or the lanes sit idle.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 10 -->
+<section id="s10">
+<h2><span class="num">§10</span> The metal stack — the third dimension</h2>
+<div class="lede">Every floorplan above is a map of one plane. Above that plane sit 15-plus layers of copper,
+and the layer a wire lives on determines how far it can go.</div>
+
+<div class="stack-x">
+  <div class="layer" style="background:var(--bg3)"><div class="nm" style="color:var(--tx3);font-size:9.5px">LAYER GROUP</div><div class="th" style="font-size:9.5px">PITCH</div><div class="bar" style="color:var(--tx3);font-size:9.5px">CARRIES</div></div>
+  <div class="layer metal"><div class="nm">Top / redistribution (M14–M15+)</div><div class="th">~µm</div><div class="bar">Power and ground planes, and the microbump landing pads. Thick copper, very low resistance. <b>This is the layer you actually see in a die photograph</b> — which is why die shots mostly show power-grid texture, and block outlines are visible only as density differences underneath.</div></div>
+  <div class="layer metal"><div class="nm">Global (M10–M13)</div><div class="th">~hundreds nm</div><div class="bar">Long-haul routing: the crossbar's wide buses between GPCs and L2, the clock distribution tree, GigaThread's dispatch fan-out to all 58 SMs. Signals here need repeater buffers every few hundred µm or RC delay dominates.</div></div>
+  <div class="layer metal"><div class="nm">Intermediate (M5–M9)</div><div class="th">~tens nm</div><div class="bar">Block-to-block wiring inside a GPC or SM: sub-partition to the 128 KB SRAM, MIO to L1.</div></div>
+  <div class="layer metal"><div class="nm">Local (M1–M4)</div><div class="th">~20–40 nm</div><div class="bar">Cell-level connections: gate to gate inside an FP32 lane, bitlines and wordlines inside an SRAM array. Extremely fine, extremely short, cannot go far.</div></div>
+  <div class="layer si hi"><div class="nm">Active silicon</div><div class="th">—</div><div class="bar">The transistors themselves. All 35.8 billion of them, in the single plane that §6–§9 map.</div></div>
+</div>
+
+<div class="note"><b>This is why the L2 is banked and the crossbar is pipelined.</b> A wire on a global metal
+layer crossing the 18.6 mm width of this die cannot deliver a signal in one 490 ps clock cycle — not because
+of the speed of light, but because RC delay on a thin copper wire forces you to break it into repeated
+segments, each costing a stage. So a long on-die path is not one slow wire, it is a <i>pipeline</i>. Every
+millimetre a request travels toward the L2 spine is latency you pay in pipeline stages and arbitration, and
+that is the real content of the &ldquo;~250–350 cycle&rdquo; L2 latency.</div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 11 -->
+<section id="s11">
+<h2><span class="num">§11</span> The host package — EPYC 7R13, chiplets on a substrate</h2>
+<div class="lede">The CPU is not one die. It is nine: eight compute chiplets on TSMC 7 nm and one large
+central I/O die on GlobalFoundries 12 nm. The package is <b>58.5 × 75.4 mm</b> — over four times the area of
+the entire L4 GPU package.</div>
+
+<div class="fpwrap">
+  <div class="cap"><b>AMD EPYC 7R13 (Zen 3 / Milan), Socket SP3, lid removed.</b> Package and die sizes <span class="tag s">SPEC</span> · chiplet arrangement follows AMD's published Milan package photos · <span class="tag r">REPRESENTATIVE</span></div>
+  <div class="fp pkg" style="aspect-ratio:75.4/58.5;min-width:660px">
+    <!-- CCD row 1 -->
+    <div class="b host tx-logic" style="left:4%;top:6%;width:14%;height:16%"><span class="l" style="font-size:8.5px">CCD 0</span><span class="s" style="font-size:7px">8 core · 32 MB L3<br>80.7 mm² · 7 nm</span></div>
+    <div class="b host tx-logic" style="left:20%;top:6%;width:14%;height:16%"><span class="l" style="font-size:8.5px">CCD 1</span><span class="s" style="font-size:7px">8 core · 32 MB L3</span></div>
+    <div class="b host tx-logic" style="left:38%;top:6%;width:14%;height:16%"><span class="l" style="font-size:8.5px">CCD 2</span><span class="s" style="font-size:7px">8 core · 32 MB L3</span></div>
+    <div class="b host tx-logic" style="left:54%;top:6%;width:14%;height:16%"><span class="l" style="font-size:8.5px">CCD 3</span><span class="s" style="font-size:7px">8 core · 32 MB L3</span></div>
+    <!-- IOD -->
+    <div class="b phy tx-logic" style="left:20%;top:26%;width:35%;height:28%">
+      <span class="l" style="font-size:9.5px">I/O DIE (IOD)</span>
+      <span class="s" style="font-size:7.5px">416 mm² · GF 12 nm<br>8 × UMC (DDR4 controllers)<br>128 × PCIe Gen4 lanes<br>Infinity Fabric switch<br>IOMMU · probe filter</span>
+    </div>
+    <!-- highlight our cores -->
+    <div class="b logic" style="left:57%;top:26%;width:38%;height:28%">
+      <span class="l" style="font-size:8.5px">OUR GUEST'S 4 vCPU CORES</span>
+      <span class="s" style="font-size:7.5px">4 cores + 16 MiB of L3 view, almost certainly half of one CCD above.<br><b>Which CCD is invisible from inside the VM.</b> <span style="color:#3ecf8e">PROBED: 1 socket, 4 cores, 8 threads, NUMA node 0</span></span>
+    </div>
+    <!-- CCD row 2 -->
+    <div class="b host tx-logic" style="left:4%;top:58%;width:14%;height:16%"><span class="l" style="font-size:8.5px">CCD 4</span><span class="s" style="font-size:7px">8 core · 32 MB L3</span></div>
+    <div class="b host tx-logic" style="left:20%;top:58%;width:14%;height:16%"><span class="l" style="font-size:8.5px">CCD 5</span><span class="s" style="font-size:7px">8 core · 32 MB L3</span></div>
+    <div class="b host tx-logic" style="left:38%;top:58%;width:14%;height:16%"><span class="l" style="font-size:8.5px">CCD 6</span><span class="s" style="font-size:7px">8 core · 32 MB L3</span></div>
+    <div class="b host tx-logic" style="left:54%;top:58%;width:14%;height:16%"><span class="l" style="font-size:8.5px">CCD 7</span><span class="s" style="font-size:7px">8 core · 32 MB L3</span></div>
+    <!-- ballout -->
+    <div class="b ghost tx-ball" style="left:4%;top:78%;width:44%;height:16%"><span class="l" style="font-size:8px">DDR4 ball-out — 8 channels</span></div>
+    <div class="b ghost tx-ball" style="left:50%;top:78%;width:45%;height:16%"><span class="l" style="font-size:8px">PCIe Gen4 ball-out — 128 lanes (8 of them reach our GPU)</span></div>
+    <div class="b ghost" style="left:70%;top:6%;width:25%;height:16%"><span class="l" style="font-size:8px">substrate · decoupling</span></div>
+    <div class="b ghost" style="left:70%;top:58%;width:25%;height:16%"><span class="l" style="font-size:8px">substrate · decoupling</span></div>
+    <div class="edgelbl" style="left:4%;top:1%">← 75.4 mm →</div>
+  </div>
+  <div class="ruler">
+    <div class="tick" style="left:0%"></div><div class="lab" style="left:0%">0</div>
+    <div class="tick" style="left:26.5%"></div><div class="lab" style="left:26.5%">20 mm</div>
+    <div class="tick" style="left:53.1%"></div><div class="lab" style="left:53.1%">40 mm</div>
+    <div class="tick" style="left:79.6%"></div><div class="lab" style="left:79.6%">60 mm</div>
+  </div>
+</div>
+
+<h3>Inside one CCD — the Zen 3 change that shows up in your probe</h3>
+<div class="fpwrap">
+  <div class="cap"><b>One Core Complex Die, 80.7 mm², TSMC 7 nm.</b> <span class="tag r">REPRESENTATIVE</span></div>
+  <div class="fp" style="aspect-ratio:10.3/7.8;min-width:520px;max-width:680px">
+    <div class="b host tx-logic" style="left:2%;top:3%;width:23%;height:29%"><span class="l" style="font-size:8px">CORE 0</span><span class="s" style="font-size:7px">32K L1i · 32K L1d<br>512K L2</span></div>
+    <div class="b host tx-logic" style="left:26%;top:3%;width:23%;height:29%"><span class="l" style="font-size:8px">CORE 1</span><span class="s" style="font-size:7px">32K+32K L1 · 512K L2</span></div>
+    <div class="b host tx-logic" style="left:51%;top:3%;width:23%;height:29%"><span class="l" style="font-size:8px">CORE 2</span><span class="s" style="font-size:7px">32K+32K L1 · 512K L2</span></div>
+    <div class="b host tx-logic" style="left:75%;top:3%;width:23%;height:29%"><span class="l" style="font-size:8px">CORE 3</span><span class="s" style="font-size:7px">32K+32K L1 · 512K L2</span></div>
+
+    <div class="b sram tx-sram" style="left:2%;top:34%;width:96%;height:30%">
+      <span class="l" style="font-size:10px">32 MB UNIFIED L3 — shared by all 8 cores</span>
+      <span class="s" style="font-size:8px">Zen 3's headline change: Zen 2 split this into two 16 MB slices of 4 cores each.<br>Our guest is billed a <b>16 MiB view</b> of one of these — <span style="color:#3ecf8e">PROBED: L3 16384K, shared_cpu_list = 0-7</span></span>
+    </div>
+
+    <div class="b host tx-logic" style="left:2%;top:66%;width:23%;height:29%"><span class="l" style="font-size:8px">CORE 4</span><span class="s" style="font-size:7px">32K+32K L1 · 512K L2</span></div>
+    <div class="b host tx-logic" style="left:26%;top:66%;width:23%;height:29%"><span class="l" style="font-size:8px">CORE 5</span><span class="s" style="font-size:7px">32K+32K L1 · 512K L2</span></div>
+    <div class="b host tx-logic" style="left:51%;top:66%;width:23%;height:29%"><span class="l" style="font-size:8px">CORE 6</span><span class="s" style="font-size:7px">32K+32K L1 · 512K L2</span></div>
+    <div class="b host tx-logic" style="left:75%;top:66%;width:23%;height:29%"><span class="l" style="font-size:8px">CORE 7</span><span class="s" style="font-size:7px">32K+32K L1 · 512K L2</span></div>
+  </div>
+</div>
+<p>The L3 as a slab in the middle with cores on both sides is the same placement logic as the GPU's L2 spine
+in §6: put the shared cache where the worst-case distance from any consumer is smallest. <b>The same physical
+argument produces the same floorplan at two wildly different scales</b> — a 32 MB L3 between 8 cores, and a
+48 MB L2 between 5 GPCs.</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 12 -->
+<section id="s12">
+<h2><span class="num">§12</span> Distance vs. latency — the surprise</h2>
+<div class="lede">Now that everything is placed, we can measure the actual copper distance of each hop and
+compare it to the observed latency. The result is counter-intuitive and worth internalising: <b>at every
+single level, the speed of light is essentially free.</b></div>
+
+<p>Signal velocity is about <b>7 ps/mm</b> both on a buffered on-die global wire and on an FR-4 PCB trace
+(≈0.47 c in both cases, for different reasons). One GPU clock at 2.04 GHz is <b>490 ps</b>. So:</p>
+
+<div class="scroll"><table>
+<thead><tr><th>Hop</th><th class="n">Distance</th><th class="n">Flight time</th><th class="n">Observed latency</th><th class="n">Flight as % of latency</th><th>Where the time actually goes</th></tr></thead>
+<tbody>
+<tr><td class="k">Register file → FP32 lane</td><td class="n">~0.2 mm</td><td class="n">~1.4 ps</td><td class="n">~0 (pipelined)</td><td class="n">—</td><td>Nothing to hide; this is the one case where the wire <i>is</i> the cost</td></tr>
+<tr><td class="k">Lane → 128 KB SRAM (shared mem)</td><td class="n">~1 mm</td><td class="n">~7 ps</td><td class="n">~26 cy = 12,700 ps</td><td class="n"><b>0.06 %</b></td><td>MIO queueing, bank arbitration, crossbar into the array, pipeline depth</td></tr>
+<tr><td class="k">SM → L2 spine (worst case corner)</td><td class="n">~9 mm</td><td class="n">~63 ps</td><td class="n">~300 cy = 147,000 ps</td><td class="n"><b>0.04 %</b></td><td>L1 miss handling, crossbar arbitration, tag lookup, repeater pipeline stages, queueing behind other SMs</td></tr>
+<tr><td class="k">L2 → PHY → GDDR6 package</td><td class="n">~30 mm</td><td class="n">~205 ps</td><td class="n">~450 cy = 220,000 ps</td><td class="n"><b>0.09 %</b></td><td>PHY serialisation, DRAM bank activate + CAS latency, refresh contention, row-buffer state</td></tr>
+<tr><td class="k">GPU die → CPU die (PCIe)</td><td class="n">~300 mm</td><td class="n">~2,000 ps</td><td class="n">~1,500,000 ps (1.5 µs)</td><td class="n"><b>0.13 %</b></td><td>TLP framing, 2 retimers, root complex, IOMMU translation, ACK/credit round trips, DDR4 access at the far end</td></tr>
+<tr><td class="k">Kernel launch</td><td class="n">~600 mm round trip</td><td class="n">~4,000 ps</td><td class="n">~5,000,000 ps (5 µs)</td><td class="n"><b>0.08 %</b></td><td>Driver work, doorbell write, GPU pulls the pushbuffer back, front-end decode, CWD scheduling</td></tr>
+</tbody></table></div>
+
+<div class="note warn"><b>So the floorplan does not explain the latency numbers.</b> Every hop is
+<b>~1000× slower than the distance requires.</b> Latency on this machine is made almost entirely of
+<i>protocol, arbitration, queueing and pipeline depth</i> — not geometry. If you have been carrying a mental
+model where "L2 is slow because it's far away", replace it: L2 is slow because a request has to lose an L1
+tag check, win a crossbar arbitration, traverse repeater stages, win a bank arbitration, and wait behind 57
+other SMs doing the same thing.</div>
+
+<p>Which raises the obvious question: if distance is free, why does physical layout matter at all? §13.</p>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 13 -->
+<section id="s13">
+<h2><span class="num">§13</span> Distance vs. energy — why the floorplan matters after all</h2>
+<div class="lede">Distance does not cost you time. It costs you <b>joules</b> — because moving a bit means
+charging the capacitance of a wire, and capacitance scales with length. On a card with a probed
+<b>72.00 W</b> ceiling, joules are the binding constraint.</div>
+
+<div class="note"><b>Provenance warning on this section.</b> The per-operation energy figures below are
+published literature estimates for comparable process nodes (Horowitz ISSCC 2014 and Dally's subsequent
+work, scaled), <b>not</b> measurements of this GPU — NVIDIA does not publish them and I did not measure
+them. Treat the absolute numbers as order-of-magnitude. The <b>ratios</b>, and the conclusion drawn from
+them, are robust. <span class="tag s">SPEC/LITERATURE</span></div>
+
+<div class="scroll"><table>
+<thead><tr><th>Operation (per 32-bit word)</th><th class="n">Distance moved</th><th class="n">≈ Energy</th><th class="n">× vs. an FMA</th></tr></thead>
+<tbody>
+<tr><td class="k">FP32 fused multiply-add</td><td class="n">~0</td><td class="n">~1.5 pJ</td><td class="n">1×</td></tr>
+<tr><td class="k">Read a register</td><td class="n">~0.2 mm</td><td class="n">~0.5 pJ</td><td class="n">0.3×</td></tr>
+<tr><td class="k">Read shared memory / L1</td><td class="n">~1 mm</td><td class="n">~8 pJ</td><td class="n">~5×</td></tr>
+<tr><td class="k">Read L2</td><td class="n">~9 mm</td><td class="n">~40 pJ</td><td class="n">~27×</td></tr>
+<tr><td class="k">Read GDDR6</td><td class="n">~30 mm, off-die</td><td class="n">~225 pJ <span class="dim">(~7 pJ/bit)</span></td><td class="n"><b>~150×</b></td></tr>
+<tr><td class="k">Move over PCIe to host</td><td class="n">~300 mm, off-board</td><td class="n">~300+ pJ</td><td class="n"><b>~200×</b></td></tr>
+</tbody></table></div>
+
+<h3>What that does to the 72 W budget — arithmetic from probed numbers</h3>
+<pre>Peak FP32 arithmetic:
+  30.29 TFLOPS ÷ 2 flop/FMA = 15.15e12 FMA/s  ×  1.5 pJ   =  <b>22.7 W</b>
+
+Peak DRAM traffic:
+  300 GB/s × 8 bit/B = 2.4e12 bit/s          ×  7 pJ/bit  =  <b>16.8 W</b>
+
+  ────────────────────────────────────────────────────────────────────
+  Both at once                                             =  <b>39.5 W</b>
+  Plus: leakage, the clock tree across 294 mm², L2 + register file
+        accesses feeding all of it, PHY static power, VRM loss
+  ────────────────────────────────────────────────────────────────────
+  Board budget <b>PROBED</b>                                       =  <b>72.00 W</b></pre>
+
+<div class="note ok"><b>This closes the loop between the floorplan and the performance model.</b>
+Saturating <i>both</i> the FP32 lanes and the memory bus would consume over half the board's entire power
+budget on those two activities alone, before any of the overheads. The card physically cannot do it — so it
+clocks down. This is why:
+<ul style="margin:8px 0 0">
+<li>A dense kernel on an L4 will <b>not</b> sustain 2,040 MHz, and you must measure sustained rather than
+burst throughput.</li>
+<li><b>Keeping data on-chip is an energy optimisation first and a latency optimisation second.</b> Every
+DRAM read you convert into a shared-memory read saves ~150× the energy — which the power manager returns to
+you as clock frequency.</li>
+<li>Ada's 48 MB L2 (§6) is not just a latency feature. At ~40 pJ versus ~225 pJ, an L2 hit costs about
+<b>1/6th the energy</b> of a DRAM access. On a 72 W passively-cooled card, that cache is a power-efficiency
+device, and it is the single biggest reason an L4 delivers what it does inside its envelope.</li>
+</ul></div>
+</section>
+
+<!-- ═══════════════════════════════════════════════════ 14 -->
+<section id="s14">
+<h2><span class="num">§14</span> Provenance — exactly what is real in each drawing</h2>
+<div class="lede">Being explicit about this so the document is useful rather than merely convincing.</div>
+
+<div class="scroll"><table>
+<thead><tr><th>Figure</th><th>Real (probed or published)</th><th>My construction</th></tr></thead>
+<tbody>
+<tr><td class="k">§1 Board</td><td>PCIe topology and bus IDs, ×8 link width, presence of 2 retimers, the other endpoints — all <span class="tag p">PROBED</span></td><td>Everything spatial. Slot positions, socket location, distances. AWS publishes no board layout and the guest cannot see slot geometry.</td></tr>
+<tr><td class="k">§2 Cross-section</td><td>Layer <i>order</i> and the flip-chip orientation are how all modern chips are built. Passive cooling and 72 W are <span class="tag p">PROBED</span>/<span class="tag s">SPEC</span>.</td><td>All thickness figures are typical values, not measurements of this card.</td></tr>
+<tr><td class="k">§3–§4 Card</td><td>169 × 68.9 mm card size <span class="tag s">SPEC</span>. 12 packages, 6 channels, 192-bit, 24 GB, clamshell — <b>logically forced</b> by the probed <code>memoryBusWidth = 192</code> and <code>totalGlobalMem</code>. No power connector, no display outputs.</td><td>Where each component sits on the PCB. I have not seen a board photograph; placement is my reconstruction from the constraints.</td></tr>
+<tr><td class="k">§5 Package</td><td>294.5 mm² die area, 35.8 B transistors, TSMC 4N <span class="tag s">SPEC</span></td><td>18.6 × 15.8 mm aspect (consistent with the area, not officially stated), package size, ball-field arrangement.</td></tr>
+<tr><td class="k"><b>§6 Die floorplan</b></td><td><b>Block inventory and counts:</b> 58 SM, 5 GPC, 6 memory controllers, 48 MB L2, 2 copy engines, no NVLink — all <span class="tag p">PROBED</span>. The <b>constraints</b> (PHYs on edges, L2 between GPCs and MCs) are physics. The L2 area estimate is derived from probed capacity × published SRAM density.</td><td><b>All placement.</b> Which edge each PHY is on, how the GPCs tile, where the media block sits, which GPC holds the fused-off TPC. <span class="tag r">REPRESENTATIVE</span> — will not overlay on a real die photo.</td></tr>
+<tr><td class="k">§7 GPC</td><td>6 TPC = 12 SM, 1 raster engine, 16 ROP per GPC <span class="tag s">SPEC</span></td><td>All placement within the GPC.</td></tr>
+<tr><td class="k">§8 SM</td><td>Every count and size <span class="tag p">PROBED</span>: 4 sub-partitions, 128 KB unified SRAM (100 KB max shared), 2 FP64, 1 RT core, 4 texture units, 65,536 registers. That shared memory and L1 are <b>one physical array</b> is real and important.</td><td>The quadrant arrangement and where each shared unit sits.</td></tr>
+<tr><td class="k">§9 Sub-partition</td><td>Unit counts <span class="tag p">PROBED</span>/<span class="tag s">SPEC</span>: 12 warp slots, 16,384 registers, 32 FP32, 16 INT32, 1 tensor core, 4 SFU, 4 LD/ST.</td><td>All placement, and the <b>relative areas</b> — including my claim that the register file is the largest block and the tensor core rivals it. Directionally right, not measured.</td></tr>
+<tr><td class="k">§10 Metal stack</td><td>The general structure (local → intermediate → global → top) is universal for this class of process.</td><td>Exact layer count and pitches for TSMC 4N are not public; figures are typical.</td></tr>
+<tr><td class="k">§11 EPYC package</td><td>4 cores / 8 threads / 1 socket / 1 NUMA node / 16 MiB L3 view / all cache geometry — <span class="tag p">PROBED</span>. Package and die sizes, 8 CCD + 1 IOD, Zen 3's unified 32 MB L3 — <span class="tag s">SPEC</span>.</td><td>Chiplet arrangement follows AMD's published package photos. <b>Which</b> CCD hosts our vCPUs is genuinely unknowable from inside the VM.</td></tr>
+<tr><td class="k">§12 Distance/latency</td><td>Latencies are the same figures as the companion document — typical measured Ada values, not from this GPU. 7 ps/mm is standard for both media.</td><td>Distances are read off my own floorplan, so they inherit its uncertainty. <b>The conclusion is robust to being wrong by 5× in either direction</b> — flight time would still be under 1% of latency.</td></tr>
+<tr><td class="k">§13 Distance/energy</td><td>72.00 W power limit, 300 GB/s, 30.3 TFLOPS — <span class="tag p">PROBED</span>/derived. The arithmetic is sound.</td><td>pJ-per-operation figures are published literature estimates for comparable nodes, scaled — <b>not</b> measurements of AD104. Absolute watts could be off by 2×; the conclusion that you cannot saturate both paths inside 72 W survives that.</td></tr>
+</tbody></table></div>
+
+<div class="note"><b>If you want the real thing.</b> To replace §6–§9 with ground truth you would need a
+delidded, decapsulated AD104 under a microscope. Published die photographs exist for AD102 and AD103 (Fritzchens
+Fritz's die-shot work is the usual source, and NVIDIA's Ada whitepaper contains official block diagrams —
+which are logical, not spatial). If you find an annotated AD104 die shot, the honest move is to overlay it
+and correct §6 rather than trust my construction.</div>
+</section>
+
+<footer style="border-top:1px solid var(--line);padding-top:20px;color:var(--tx3);font-size:11px">
+Hardware probed 2026-08-26 · NVRM 595.71.05 · CUDA 13.2 · AD104 (L4, CC 8.9) · AMD EPYC 7R13.
+Probe commands and raw output: <a href="MACHINE_ARCHITECTURE.html#s16">MACHINE_ARCHITECTURE.html §16</a>.
+Logical / hierarchical companion view: <a href="MACHINE_ARCHITECTURE.html">MACHINE_ARCHITECTURE.html</a>.
+<br>Floorplans in §6–§9 are structurally-constrained schematics, not die photographs — see §14.
+</footer>
+
+</div>
+</body>
+</html>

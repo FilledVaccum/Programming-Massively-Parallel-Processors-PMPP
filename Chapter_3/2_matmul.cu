@@ -18,12 +18,12 @@ __global__ void matmul(int *A, int *B, int *C, int M, int K, int N) {
 int main() {
 
 	// Defining the shape of matrix
-	int a_row = 300;
+	int a_row = 3000;
 	int a_col = 200;
 	int a_total_values = a_row * a_col;
 
 	int b_row = 200;
-	int b_col = 300;
+	int b_col = 3000;
 	int b_total_values = b_row  * b_col;
 
 	int c_row = a_row;
@@ -31,10 +31,14 @@ int main() {
 	int c_total_values = c_row *  c_col;
 
 	// Let's get them some space in CPU RAM
-	int matrix_a[a_total_values];
-	int matrix_b[b_total_values];
-	int matrix_c[c_total_values];
+//	int matrix_a[a_total_values];
+//	int matrix_b[b_total_values];
+//	int matrix_c[c_total_values];
 
+	int *matrix_a = (int *)malloc(a_total_values * sizeof(int));
+	int *matrix_b = (int *)malloc(b_total_values * sizeof(int));
+	int *matrix_c = (int *)malloc(c_total_values * sizeof(int));
+	
 	//let's initialize them with random values
 	for ( int i = 0; i < a_total_values  ; i++ ) {
 		matrix_a[i] = i % 10;
@@ -82,4 +86,8 @@ int main() {
                 printf("Index %d: Value = %d\n", i, matrix_c[i]);
         }  
 
+	//Free CPU RAM
+	free(matrix_a);
+	free(matrix_b);
+	free(matrix_c);
 }

@@ -1,0 +1,57 @@
+==PROF== Connected to process 2286115 (/home/ec2-user/SageMaker/PMPP/Chapter_3/2_matmul)
+Index 0: Value = 0
+Index 1: Value = 900
+Index 2: Value = 1800
+Index 3: Value = 2700
+Index 4: Value = 3600
+Index 5: Value = 4500
+Index 6: Value = 5400
+Index 7: Value = 6300
+Index 8: Value = 7200
+Index 9: Value = 8100
+==PROF== Disconnected from process 2286115
+"ID","Process ID","Process Name","Host Name","Kernel Name","Context","Stream","Block Size","Grid Size","Device","CC","Section Name","Metric Name","Metric Unit","Metric Value","Rule Name","Rule Type","Rule Description","Estimated Speedup Type","Estimated Speedup"
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU Speed Of Light Throughput","DRAM Frequency","hz","6244655909.53",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU Speed Of Light Throughput","SM Frequency","hz","2035215659.91",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU Speed Of Light Throughput","Elapsed Cycles","cycle","3937514",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU Speed Of Light Throughput","Memory Throughput","%","99.62",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU Speed Of Light Throughput","DRAM Throughput","%","4.68",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU Speed Of Light Throughput","Duration","ns","1933600",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU Speed Of Light Throughput","L1/TEX Cache Throughput","%","99.78",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU Speed Of Light Throughput","L2 Cache Throughput","%","17.62",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU Speed Of Light Throughput","SM Active Cycles","cycle","3927632.66",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU Speed Of Light Throughput","Compute (SM) Throughput","%","99.62",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","SpeedOfLight","","","","SOLBottleneck","INF","This workload is utilizing greater than 80.0% of the available compute or memory performance of this device. To further improve performance, work will likely need to be shifted from the most utilized to another unit. Start by analyzing workloads in the Compute Workload Analysis section.","",""
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Block Size","","256",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Function Cache Configuration","","CachePreferNone",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Grid Size","","35344",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Registers Per Thread","register/thread","40",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Shared Memory Configuration Size","byte","16384",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Driver Shared Memory Per Block","byte/block","1024",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Dynamic Shared Memory Per Block","byte/block","0",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Static Shared Memory Per Block","byte/block","0",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","# SMs","SM","58",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Stack Size","","1024",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Threads","thread","9048064",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","# TPCs","","29",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Enabled TPC IDs","","all",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Uses Green Context","","0",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Launch Statistics","Waves Per SM","","101.56",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Occupancy","Block Limit SM","block","24",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Occupancy","Block Limit Registers","block","6",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Occupancy","Block Limit Shared Mem","block","16",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Occupancy","Block Limit Warps","block","6",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Occupancy","Theoretical Active Warps per SM","warp","48",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Occupancy","Theoretical Occupancy","%","100",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Occupancy","Achieved Occupancy","%","97.67",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","Occupancy","Achieved Active Warps Per SM","warp","46.88",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU and Memory Workload Distribution","Average DRAM Active Cycles","cycle","565458.67",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU and Memory Workload Distribution","Total DRAM Elapsed Cycles","cycle","72448000",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU and Memory Workload Distribution","Average L1 Active Cycles","cycle","3927632.66",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU and Memory Workload Distribution","Total L1 Elapsed Cycles","cycle","228168454",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU and Memory Workload Distribution","Average L2 Active Cycles","cycle","3413125.21",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU and Memory Workload Distribution","Total L2 Elapsed Cycles","cycle","82775808",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU and Memory Workload Distribution","Average SM Active Cycles","cycle","3927632.66",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU and Memory Workload Distribution","Total SM Elapsed Cycles","cycle","228168454",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU and Memory Workload Distribution","Average SMSP Active Cycles","cycle","3927068.02",
+"0","2286115","2_matmul","127.0.0.1","matmul(int *, int *, int *, int, int, int)","1","7","(16, 16, 1)","(188, 188, 1)","0","8.9","GPU and Memory Workload Distribution","Total SMSP Elapsed Cycles","cycle","912673816",
